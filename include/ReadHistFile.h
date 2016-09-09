@@ -77,7 +77,8 @@ class ReadHistFile {
 
 public:
 
-  ReadHistFile(std::string filename);
+  ReadHistFile();
+  unsigned int ReadFile(std::string filename);
 
   HitInfo * GetHitInfo(unsigned int i) {
     return hits[i];
@@ -87,7 +88,11 @@ private:
   std::map<unsigned int, HitInfo> hits;
 };
 
-HitValidation::HitValidation(std::string filename)
+ReadHistFile::ReadHistFile()
+{
+}
+
+unsigned int ReadHistFile::ReadFile(std::string filename)
 {
   TFile * file = TFile::Open(filename.c_str(),"READ");
   TTreeReader reader("robusthits/RobustHitFinder",file);
@@ -218,6 +223,7 @@ HitValidation::HitValidation(std::string filename)
       hits.emplace(std::make_pair(i,hi));
       i++;
     }
+  return i;
 }
 
 #endif
