@@ -10,91 +10,43 @@
 #include <map>
 #include <algorithm>
 
-class HitInfo {
-public:
-  Int_t run;
-  Int_t event;
-  UInt_t c1;
-  UInt_t c2;
-  UInt_t trignum;
-  Float_t c1x;
-  Float_t c1y;
-  Float_t c1z;
-  Float_t c2x;
-  Float_t c2y;
-  Float_t c2z;
-  Int_t channel;
-  Int_t tpc;
-  Int_t signalsize;
-  Float_t baseline;
-  Float_t rms;
-  Float_t baselineFilter;
-  Float_t rmsFilter;
-  Float_t pedmean;
-  Float_t pedrms;
-  Float_t integral;
-  Float_t integralFilter;
-  Float_t sigmaintegral;
-  Float_t sigmaintegralFilter;
-  Float_t amplitude;
-  Float_t amplitudeFilter;
-  Float_t peaktick;
-  Float_t peaktickFilter;
-  Float_t peaktime;
-  Float_t peaktimeFilter;
-  Int_t begintick;
-  Int_t endtick;
-  Int_t width;
-  Float_t hitx;
-  Float_t hity;
-  Float_t hitz;
-  Float_t hiterrxlo;
-  Float_t hiterrxhi;
-  Float_t hiterrylo;
-  Float_t hiterryhi;
-  Float_t hiterrzlo;
-  Float_t hiterrzhi;
-  Float_t perpdist;
-  Float_t hitt;
-  Float_t driftdist;
-  Bool_t countercut;
-  Float_t fitconstant;
-  Float_t fitconstanterr;
-  Float_t fitlinear;
-  Float_t fitlinearerr;
-  Float_t fitquadratic;
-  Float_t fitquadraticerr;
-  Float_t fitchi2;
-  Float_t fitsumsqrresidual;
-  Float_t fitndf;
-  Float_t fitmle;
-  Bool_t fitsuccess;
-  Bool_t fitrealhit;
-  Float_t segmentlength;
-};
+#include "UsefulTypes.h"
 
 class ReadHistFile {
 
 public:
 
   ReadHistFile();
-  unsigned int ReadFile(std::string filename);
+  UInt_t ReadFile(std::string filename);
 
-  HitInfo * GetHitInfo(unsigned int i) {
-    return hits[i];
+  types::HitMap * GetHitMap() {
+    return &hits;
+  }
+
+  std::vector<Int_t> GetRunList() {
+    return runs;
   }
 
 private:
-  std::map<unsigned int, HitInfo> hits;
+  types::HitMap hits;
+  std::vector<Int_t> runs;
 };
 
 ReadHistFile::ReadHistFile()
 {
 }
 
-unsigned int ReadHistFile::ReadFile(std::string filename)
+UInt_t ReadHistFile::ReadFile(std::string filename)
 {
   TFile * file = TFile::Open(filename.c_str(),"READ");
+  if (!file || file->IsZombie())
+    {
+      std::cout << "ReadHistFile::ReadFile() -- Input file is not read" << std::endl;
+      return 0;
+    }
+
+  std::cout << "ReadHistFile::ReadFile() -- Reading file " << filename << std::endl;
+
   TTreeReader reader("robusthits/RobustHitFinder",file);
 
   TTreeReaderValue<Int_t> run(reader,"run");
@@ -157,10 +109,10 @@ unsigned int ReadHistFile::ReadFile(std::string filename)
   TTreeReaderValue<Bool_t> fitrealhit(reader,"fitrealhit");
   TTreeReaderValue<Float_t> segmentlength(reader,"segmentlength");
 
-  unsigned int i = 0;
+  UInt_t i = 0;
   while (reader.Next())
     {
-      HitInfo hi;
+      types::HitInfo hi;
       hi.run = *run;
       hi.event = *event;
       hi.c1 = *c1;
@@ -222,7 +174,9 @@ unsigned int ReadHistFile::ReadFile(std::string filename)
       hi.segmentlength = *segmentlength;
       hits.emplace(std::make_pair(i,hi));
       i++;
+      if (std::find(runs.begin(),runs.end(),hi.run) == runs.end()) runs.push_back(hi.run);
     }
+  std::cout << "ReadHistFile::ReadFile() -- Finished reading file. " << i << " hits were found in " << runs.size() << " runs." << std::endl;
   return i;
 }
 

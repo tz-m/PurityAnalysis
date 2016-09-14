@@ -1,12 +1,12 @@
 #include "HitValidation.h"
 
-void HitValidation::CalculateAvgHitsPerWire(AvgHits & ah, Bool_t MC)
+void HitValidation::CalculateAvgHitsPerWire(types::EfficiencyGraph & allavg, types::TPCEfficiencyMap & chanavg, Bool_t MC)
 {
-  ah.allavg.clear();
-  ah.allavg.resize((MC) ? 6 : 7); // 7 for data, 6 for MC (because geometry differs)
-  ah.chanavg.clear();
+  allavg.clear();
+  allavg.resize((MC) ? 6 : 7); // 7 for data, 6 for MC (because geometry differs)
+  chanavg.clear();
 
-  std::map<UInt_t,std::map<Int_t, std::vector<Int_t> > > cpairs;
+  std::map<UInt_t,std::map<Int_t, std::vector<Int_t> > > cpairs; //counterid - runnum - eventnum
   std::map<UInt_t,Float_t> counterx;
   for (auto & hit : hits)
     {
@@ -80,21 +80,12 @@ void HitValidation::CalculateAvgHitsPerWire(AvgHits & ah, Bool_t MC)
 
 }
 
-void HitValidation::SetPedestalLimits(Float_t pedmeanmin, Float_t pedmeanmax, Float_t pedrmsmin, Float_t pedrmsmax)
-{
-  for (auto & ped : pedcheck)
-    {
-      ped.second.setMinMaxRMS(pedrmsmin,pedrmsmax);
-      ped.second.setMinMaxPed(pedmeanmin,pedmeanmax);
-    }
-}
-
 void HitValidation::GraphAvgHitsWires()
 {
   Bool_t MC = false;
   TCanvas * canv1 = new TCanvas("canv1","avghits",2000,1600);
   TCanvas * canv2 = new TCanvas("canv2","channelInfo",2000,1600);
-  AvgHits ah;
+  types::AvgHits ah;
   TMultiGraph * mg = new TMultiGraph();
   TGraphErrors * effrms = new TGraphErrors();
   Int_t i_effrms = 0;
