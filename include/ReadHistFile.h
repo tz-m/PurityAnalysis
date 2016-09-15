@@ -7,6 +7,7 @@
 #include "TTreeReader.h"
 
 #include <string>
+#include <sstream>
 #include <map>
 #include <algorithm>
 
@@ -41,8 +42,9 @@ UInt_t ReadHistFile::ReadFile(std::string filename)
   TFile * file = TFile::Open(filename.c_str(),"READ");
   if (!file || file->IsZombie())
     {
-      std::cout << "ReadHistFile::ReadFile() -- Input file is not read" << std::endl;
-      return 0;
+      std::stringstream ss;
+      ss << "ReadHistFile::ReadFile() -- Input file is not read";
+      throw std::runtime_error(ss.str());
     }
 
   std::cout << "ReadHistFile::ReadFile() -- Reading file " << filename << std::endl;

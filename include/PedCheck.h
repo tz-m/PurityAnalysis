@@ -10,6 +10,8 @@
 #include <map>
 #include <sstream>
 
+#include "TMath.h"
+
 class PedCheck
 {
 public:
@@ -17,11 +19,14 @@ public:
 
   Bool_t ReadPeds(std::vector<Int_t> runvec);
 
-  Double_t PedRms(Int_t run, Int_t offlinechannel) {
+  Float_t PedRmsRms(Int_t offlinechannel);
+  Float_t PedMeanRms(Int_t offlinechannel);
+
+  Float_t PedRms(Int_t run, Int_t offlinechannel) {
     return ( (valid) ? runchanpedrms[run][offlinechannel].second : -99999 );
   }
 
-  Double_t PedMean(Int_t run, Int_t offlinechannel) {
+  Float_t PedMean(Int_t run, Int_t offlinechannel) {
     return ( (valid) ? runchanpedrms[run][offlinechannel].first : -99999);
   }
 
@@ -30,7 +35,7 @@ private:
 
   Bool_t valid;
   std::map<Int_t,Int_t> onlineoffline;
-  std::map<Int_t,std::map<Int_t,std::pair<Double_t,Double_t> > > runchanpedrms;
+  std::map<Int_t,std::map<Int_t,std::pair<Float_t,Float_t> > > runchanpedrms;
 };
 
 PedCheck::PedCheck()
@@ -110,7 +115,7 @@ Bool_t PedCheck::ReadPed(Int_t run)
                   ssagain >> VAL;
                   linevec.push_back(VAL);
                 }
-              runchanpedrms[run][onlineoffline[stoi(linevec[0])]] = std::pair<Double_t,Double_t>(stod(linevec[1]),stod(linevec[2]));
+              runchanpedrms[run][onlineoffline[stoi(linevec[0])]] = std::pair<Float_t,Float_t>(stof(linevec[1]),stof(linevec[2]));
             }
         }
       else
@@ -120,6 +125,38 @@ Bool_t PedCheck::ReadPed(Int_t run)
         }
     }
   return true;
+}
+
+Float_t PedCheck::PedRmsRms(Int_t offlinechannel)
+{
+  std::vector<Float_t> rms;
+  for (auto const & run : runchanpedrms)
+    {
+      for (auto const & chan : run.second)
+        {
+          if (chan.first == offlinechannel)
+            {
+              rms.push_back(PedRms(run.first,offlinechannel));
+            }
+        }
+    }
+  return static_cast<Float_t>(TMath::RMS(rms.size(),rms.data()));
+}
+
+Float_t PedCheck::PedMeanRms(Int_t offlinechannel)
+{
+  std::vector<Float_t> rms;
+  for (auto const & run : runchanpedrms)
+    {
+      for (auto const & chan : run.second)
+        {
+          if (chan.first == offlinechannel)
+            {
+              rms.push_back(PedRms(run.first,offlinechannel));
+            }
+        }
+    }
+  return static_cast<Float_t>(TMath::Mean(rms.size(),rms.data()));
 }
 
 #endif

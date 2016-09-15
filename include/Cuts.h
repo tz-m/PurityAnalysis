@@ -15,41 +15,34 @@ public:
 
   Bool_t PrepareCuts(std::string configfile, std::vector<Int_t> runvec);
 
-  Bool_t ChannelPass(const types::HitInfo & hit);
-  Bool_t HitPass(const types::HitInfo & hit);
-  Bool_t CounterPass(const types::HitInfo & hit);
+  Bool_t ChannelPass(const types::HitInfo * hit);
+  Bool_t HitPass(const types::HitInfo * hit);
+  Bool_t CounterPass(const types::HitInfo * hit);
 
   Bool_t GapWire(Int_t channel);
   Bool_t PedestalCut(Int_t run, Int_t channel);
 
-  Float_t GetAnalysisCut(std::string ananame, std::string cutname);
+  Float_t GetAnalysisCutFloat(std::string ananame, std::string parname);
+  Bool_t GetAnalysisCutBool(std::string ananame, std::string parname);
+
+  PedCheck * GetPedCheckPtr() {
+    return pc;
+  }
 
 private:
-  Float_t minPedMean;
-  Float_t maxPedMean;
-  Float_t minPedRms;
-  Float_t maxPedRms;
+  PedCheck * pc;
 
-  Bool_t cutpedestals;
-  Bool_t fitrealhit;
-  Bool_t oppcounter;
-
-  PedCheck pc;
-
-  std::map<std::string,std::map<std::string,Float_t> > cutmapfloat;
+  types::AnalysisCuts_F anacutsfloat;
+  types::AnalysisCuts_B anacutsbool;
 };
 
 Cuts::Cuts()
-  : minPedMean(-99999),
-    maxPedMean(-99999),
-    minPedRms(-99999),
-    maxPedRms(-99999),
-    cutpedestals(false),
-    fitrealhit(true),
-    oppcounter(true)
+  : pc(new PedCheck())
 {
 
 }
+
+
 
 Bool_t Cuts::PrepareCuts(std::string configfile, std::vector<Int_t> runvec)
 {
@@ -66,36 +59,12 @@ Bool_t Cuts::PrepareCuts(std::string configfile, std::vector<Int_t> runvec)
 
           if (TYPEOFPAR == "bool")
             {
-              if (NAMEOFPAR == "CutPedestals")
-                {
-                  if (PAR == "true") cutpedestals = true;
-                  else if (PAR == "false") cutpedestals = false;
-                }
-              if (NAMEOFPAR == "FitRealHit")
-                {
-                  if (PAR == "true") fitrealhit = true;
-                  else if (PAR == "false") fitrealhit = false;
-                }
-              if (NAMEOFPAR == "EastWestOpposite")
-                {
-                  if (PAR == "true") oppcounter = true;
-                  else if (PAR == "false") oppcounter = false;
-                }
+              if (PAR == "true") anacutsbool[NAMEOFANA][NAMEOFPAR] = true;
+              if (PAR == "false") anacutsbool[NAMEOFANA][NAMEOFPAR] = false;
             }
-          else if (TYPEOFPAR == "float")
+          if (TYPEOFPAR == "float")
             {
-              if (NAMEOFPAR == "MinPedMean") minPedMean = stod(PAR);
-
-              if (NAMEOFPAR == "MaxPedMean") maxPedMean = stod(PAR);
-
-              if (NAMEOFPAR == "MinPedRms") minPedRms  = stod(PAR);
-
-              if (NAMEOFPAR == "MaxPedRms") maxPedRms  = stod(PAR);
-
-              if (NAMEOFPAR == "MakePlotFromTree")
-                {
-
-                }
+              anacutsfloat[NAMEOFANA][NAMEOFPAR] = stof(PAR);
             }
         }
     }
@@ -105,38 +74,66 @@ Bool_t Cuts::PrepareCuts(std::string configfile, std::vector<Int_t> runvec)
       valid=false;
     }
 
-  if (cutpedestals)
-    {
-      valid = valid && pc.ReadPeds(runvec);
-    }
+  //if (GetAnalysisCutBool("All","CutPedestals"))
+  {
+    valid = valid && pc->ReadPeds(runvec);
+  }
 
+  if (!valid) std::cout << "Problem with setting up cuts" << std::endl;
   return valid;
 }
 
-Bool_t Cuts::ChannelPass(const types::HitInfo & hit)
+Float_t Cuts::GetAnalysisCutFloat(std::string ananame, std::string parname)
 {
-  Bool_t pedestalpass = !PedestalCut(hit.run,hit.channel);
-  Bool_t gapwirepass = !GapWire(hit.channel);
+  if (anacutsfloat[ananame].find(parname) == anacutsfloat[ananame].end())
+    {
+      std::stringstream ss;
+      ss << "Analysis \"" << ananame << "\" or parameter \"" << parname << "\" was not found";
+      throw std::runtime_error(ss.str());
+    }
+  return anacutsfloat[ananame][parname];
+}
+
+Bool_t Cuts::GetAnalysisCutBool(std::string ananame, std::string parname)
+{
+  if (anacutsbool[ananame].find(parname) == anacutsbool[ananame].end())
+    {
+      std::stringstream ss;
+      ss << "Analysis \"" << ananame << "\" or parameter \"" << parname << "\" was not found";
+      throw std::runtime_error(ss.str());
+    }
+  return anacutsbool[ananame][parname];
+}
+
+Bool_t Cuts::ChannelPass(const types::HitInfo * hit)
+{
+  Bool_t pedestalpass = !PedestalCut(hit->run,hit->channel);
+  Bool_t gapwirepass = !GapWire(hit->channel);
   return pedestalpass && gapwirepass;
 }
 
-Bool_t Cuts::HitPass(const types::HitInfo & hit)
+Bool_t Cuts::HitPass(const types::HitInfo * hit)
 {
-  Bool_t realhitpass = (fitrealhit == hit.fitrealhit);
-  return realhitpass;
+  Bool_t realhitpass = (GetAnalysisCutBool("All","FitRealHit") == hit->fitrealhit);
+  Bool_t consistenttime = fabs(hit->peaktime - hit->peaktimeFilter) < 5;
+  return realhitpass && consistenttime;
 }
 
-Bool_t Cuts::CounterPass(const types::HitInfo & hit)
+Bool_t Cuts::CounterPass(const types::HitInfo * hit)
 {
-  Bool_t ewopposite = !(oppcounter && !((hit.c1>=6 && hit.c1<=15) || (hit.c1>=28 && hit.c1<=37)) && (hit.c1%22==hit.c2 || hit.c2%22==hit.c1));
+  Bool_t ewopposite = !(GetAnalysisCutBool("All","EastWestOpposite") && !(((hit->c1>=6 && hit->c1<=15) || (hit->c1>=28 && hit->c1<=37)) && (hit->c1%22==hit->c2 || hit->c2%22==hit->c1)));
   return ewopposite;
 }
 
 Bool_t Cuts::PedestalCut(Int_t run, Int_t channel)
 {
-  Double_t m = pc.PedMean(run,channel);
-  Double_t r = pc.PedRms(run,channel);
-  return cutpedestals && (r<minPedRms || r>maxPedRms || m<minPedMean || m>maxPedMean);
+  Float_t m = pc->PedMean(run,channel);
+  Float_t r = pc->PedRms(run,channel);
+  Float_t minRms = GetAnalysisCutFloat("All","MinPedRms");
+  Float_t maxRms = GetAnalysisCutFloat("All","MaxPedRms");
+  Float_t minMean = GetAnalysisCutFloat("All","MinPedMean");
+  Float_t maxMean = GetAnalysisCutFloat("All","MaxPedMean");
+  return GetAnalysisCutBool("All","CutPedestals") && (r<minRms || r>maxRms || m<minMean || m>maxMean);
 }
 
 Bool_t Cuts::GapWire(Int_t channel)

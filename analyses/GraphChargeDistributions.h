@@ -7,45 +7,81 @@ class GraphChargeDistributions : public Analysis
 {
 public:
   void run();
+  void reconfigureCuts();
+private:
+  TCanvas * DrawCanvas(TH1F * shortd, TH1F * longd, std::string canvname);
+
+  Float_t mincharge;
+  Float_t maxcharge;
 };
+
+void GraphChargeDistributions::reconfigureCuts()
+{
+  mincharge = cuts.GetAnalysisCutFloat("GraphChargeDistributions","MinVal");
+  std::cout << "Minimum charge window = " << mincharge << std::endl;
+  maxcharge = cuts.GetAnalysisCutFloat("GraphChargeDistributions","MaxVal");
+  std::cout << "Maximum charge window = " << maxcharge << std::endl;
+}
+
 
 void GraphChargeDistributions::run()
 {
+  reconfigureCuts();
+  TH1F * shortd_real = new TH1F("shortd_real","Hit Charge Distribution -- Real Hits",200,mincharge,maxcharge);
+  TH1F * longd_real = new TH1F("longd_real","Hit Charge Distribution -- Real Hits",200,mincharge,maxcharge);
+  TH1F * shortd_fake = new TH1F("shortd_fake","Hit Charge Distribution -- Fake Hits",200,mincharge,maxcharge);
+  TH1F * longd_fake = new TH1F("longd_fake","Hit Charge Distribution -- Fake Hits",200,mincharge,maxcharge);
+  std::cout << "Filling Histograms" << std::endl;
+  for (auto const & hititr : *(file.GetHitMap()))
+    {
+      const types::HitInfo * hit = &(hititr.second);
+      if (cuts.ChannelPass(hit) && cuts.CounterPass(hit))
+        {
+          if (cuts.HitPass(hit))
+            {
+              if (hit->c1==30) shortd_real->Fill(hit->integral/hit->segmentlength);
+              if (hit->c1==36) longd_real->Fill(hit->integral/hit->segmentlength);
+            }
+          if (!(cuts.HitPass(hit)))
+            {
+              if (hit->c1==30) shortd_fake->Fill(hit->integral/hit->segmentlength);
+              if (hit->c1==36) longd_fake->Fill(hit->integral/hit->segmentlength);
+            }
+        }
+    }
+  std::cout << "Finished filling histograms" << std::endl;
+  TCanvas * canv1 = DrawCanvas(shortd_real,longd_real,"real");
+  canv1->Draw();
+  TCanvas * canv2 = DrawCanvas(shortd_fake,longd_fake,"fake");
+  canv2->Draw();
+}
+
+TCanvas * GraphChargeDistributions::DrawCanvas(TH1F * shortd, TH1F * longd, std::string canvname)
+{
   gStyle->SetOptStat(11);
-  TCanvas * canv1 = new TCanvas("gcds1","GraphChargeDistributions1",2000,1600);
+  TCanvas * canv = new TCanvas(canvname.c_str(),"GraphChargeDistributions",2000,1600);
   TPad * pad1 = new TPad("pad1","",0,0,1,1);
   TPad * pad2 = new TPad("pad2","",0,0,1,1);
   pad2->SetFillStyle(4000);
   pad1->Draw();
   pad1->cd();
-  TH1F * shortd = new TH1F("shortd","Hit Charge Distribution",200,0,20000);
-  TH1F * longd = new TH1F("longd","Hit Charge Distribution",200,0,20000);
-  for (auto const & hititr : *(file.GetHitMap()))
-    {
-      const types::HitInfo hit = hititr.second;
-      if (cuts.ChannelPass(hit) && cuts.CounterPass(hit) && cuts.HitPass(hit))
-        {
-          if (hit.c1==30) shortd->Fill(hit.integral/hit.segmentlength);
-          if (hit.c1==36) longd->Fill(hit.integral/hit.segmentlength);
-        }
-    }
   Double_t maxval = std::max(shortd->GetBinContent(shortd->GetMaximumBin()),longd->GetBinContent(longd->GetMaximumBin()));
   shortd->SetLineColor(kBlue);
   shortd->SetLineWidth(2);
   shortd->SetAxisRange(0,maxval*1.1,"Y");
   shortd->Draw();
-  shortd->GetXaxis()->SetTitle("Summed ADC / Effective Track Length on Wire");
+  shortd->GetXaxis()->SetTitle("Summed ADC / Effective Track Length on Wire (ADC/cm)");
   pad1->Update();
   TPaveStats * ps1 = (TPaveStats*)shortd->GetListOfFunctions()->FindObject("stats");
   ps1->SetX1NDC(0.4); ps1->SetX2NDC(0.6);
   ps1->SetTextColor(kBlue);
   pad1->Modified();
-  canv1->cd();
+  canv->cd();
   Double_t ymin = 0;
   Double_t ymax = maxval*1.1;
   Double_t dy = (ymax-ymin)/0.8;
-  Double_t xmin = 0;
-  Double_t xmax = 20000;
+  Double_t xmin = mincharge;
+  Double_t xmax = maxcharge;
   Double_t dx = (xmax-xmin)/0.8;
   pad2->Range(xmin-0.1*dx,ymin-0.1*dy,xmax+0.1*dx,ymax+0.1*dy);
   pad2->Draw();
@@ -66,7 +102,7 @@ void GraphChargeDistributions::run()
   leg->AddEntry(shortd,"Short Drift (<20cm)","l");
   leg->AddEntry(longd,"Long Drift (>200cm)","l");
   leg->Draw();
-
+  return canv;
 }
 
 

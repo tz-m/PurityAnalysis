@@ -6,6 +6,7 @@ namespace types {
   typedef std::vector<std::pair<Float_t, Float_t> > EfficiencyGraph; //vector of x position and efficiency
   typedef std::map<Int_t,EfficiencyGraph> ChannelEfficiencyMap;
   typedef std::map<Int_t,ChannelEfficiencyMap> TPCEfficiencyMap;
+  typedef std::map<Int_t,TPCEfficiencyMap> RunEfficiencyMap;
 
   struct HitInfo {
     Int_t run;
@@ -70,6 +71,11 @@ namespace types {
   };
 
   typedef std::map<UInt_t,HitInfo> HitMap;
+
+  typedef std::map<std::string,Float_t> CutMap_F;
+  typedef std::map<std::string,CutMap_F> AnalysisCuts_F;
+  typedef std::map<std::string,Bool_t> CutMap_B;
+  typedef std::map<std::string,CutMap_B> AnalysisCuts_B;
 
 };
 

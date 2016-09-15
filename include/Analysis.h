@@ -24,7 +24,7 @@
 
 class Analysis {
 public:
-  Bool_t Setup(std::string filename);
+  Bool_t Setup(std::string datafile, std::string configfile);
 
 protected:
   ReadHistFile file;
@@ -33,11 +33,11 @@ protected:
   Bool_t status;
 };
 
-Bool_t Analysis::Setup(std::string filename)
+Bool_t Analysis::Setup(std::string datafile, std::string configfile)
 {
   status = true;
-  std::cout << "Analysis::Setup() -- Setup analysis: " << std::endl;
-  if (file.ReadFile(filename) == 0)
+  std::cout << "Analysis::Setup() -- Setting up analysis" << std::endl;
+  if (file.ReadFile(datafile) == 0)
     {
       status = false;
       std::cout << "Analysis::Setup() -- No hits read." << std::endl;
@@ -48,11 +48,12 @@ Bool_t Analysis::Setup(std::string filename)
       status = false;
       std::cout << "Analysis::Setup() -- No runs read." << std::endl;
     }
-  if (!(cuts.PrepareCuts("/home/mthiesse/PurityAnalysis/cuts.conf",runlist)))
+  if (!(cuts.PrepareCuts(configfile,runlist)))
     {
       status = false;
       std::cout << "Analysis::Setup() -- Cuts not set up." << std::endl;
     }
+  std::cout << "Analysis::Setup() -- Finished setting up analysis with status " << status << std::endl;
   return status;
 }
 
