@@ -1,6 +1,7 @@
 #include "MakePlotFromTree.h"
 #include "GraphChargeDistributions.h"
 #include "GraphAvgHitsWires.h"
+#include "PurityAnalysis.h"
 
 #include "InputParser.h"
 
@@ -27,6 +28,7 @@ int main(int argc, char** argv)
       std::cout << "   GraphChargeDistributions : Make plots of" << std::endl;
       std::cout << "       charge distributions of \"real\" and" << std::endl;
       std::cout << "       \"fake\" hits" << std::endl;
+      std::cout << "   PurityAnalysis : Do purity analysis" << std::endl;
       gApplication->Terminate(0);
       return 0;
     }
@@ -70,6 +72,13 @@ int main(int argc, char** argv)
           GraphAvgHitsWires gahw;
           gahw.Setup(datafile,configfile);
           gahw.run();
+        }
+      else if (analysis == "PurityAnalysis")
+        {
+          std::cout << "DoAnalysis -- Doing Purity Analysis" << std::endl;
+          PurityAnalysis pa;
+          pa.Setup(datafile,configfile);
+          pa.run();
         }
       else
         {

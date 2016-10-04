@@ -6,6 +6,7 @@
 #include "UsefulTypes.h"
 
 #include "TH1.h"
+#include "TF1.h"
 #include "TGraph.h"
 #include "TCanvas.h"
 #include "TPad.h"
