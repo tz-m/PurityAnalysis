@@ -40,8 +40,6 @@ struct FitResult
   Float_t meangauss2;
   Float_t widthgauss2;
   Int_t status;
-  Float_t g2amp;
-  Float_t g3amp;
   Float_t chi2ndf;
 };
 
@@ -136,7 +134,9 @@ void PurityAnalysis::run()
    workspace->import(gauss);
    workspace->import(*chgdata);
  */
-  TH1F * hbin = new TH1F("hbin","LandMPV",Nbins,0,2011);
+  TH1F * hbin = new TH1F("hbin","Most Probable dQ/dx",Nbins,0,2011);
+  Double_t minMPV = 99999;
+  Double_t maxMPV = -99999;
 
   for (UInt_t i = 0; i < Nbins; i++)
     {
@@ -161,21 +161,21 @@ void PurityAnalysis::run()
           ml.setMax(maxbin+1000);
           sl.setVal(850);
           sl.setMin(60);
-          sl.setMax(1000);
+          sl.setMax(2000);
 
           //setup gauss(t,mg,sg)
           //mg.setVal(1);
           //mg.setMin(-100);
           //mg.setMax(100);
-          sg.setVal(350);
-          sg.setMin(100);
-          sg.setMax(800);
+          sg.setVal(550);
+          sg.setMin(10);
+          sg.setMax(2000);
 
           // construct convolution pdf
           // -------------------------
 
           // set num bins to be used for FFT sampling
-          charge.setBins(10000,"fft");
+          charge.setBins(1000,"fft");
 
           // fit convoluted pdf to binHist
           // -----------------------------
@@ -192,7 +192,7 @@ void PurityAnalysis::run()
           //m.hesse();
           //RooFitResult * rooresult = m.save();
           //RooFitResult * rooresult =
-          lxg.fitTo(*roodata,RooFit::Extended(true),RooFit::Minimizer("Minuit2","migrad"),RooFit::Save(),RooFit::PrintLevel(-1),RooFit::Range(shortname));
+          lxg.fitTo(*roodata,RooFit::Save(),RooFit::PrintLevel(-1),RooFit::Range(shortname));
           RooPlot * frame = charge.frame(RooFit::Title(timeBinHist[i].hist->GetTitle()));
           roodata->plotOn(frame,RooFit::Binning(200));
           lxg.plotOn(frame,RooFit::LineColor(kRed),RooFit::ShiftToZero());
@@ -213,6 +213,9 @@ void PurityAnalysis::run()
           results[i].meangauss = mg.getVal();
           results[i].widthgauss = sg.getVal();
           results[i].chi2ndf = frame->chiSquare();
+
+          if (minMPV > results[i].meanlandau) minMPV = results[i].meanlandau;
+          if (maxMPV < results[i].meanlandau) maxMPV = results[i].meanlandau;
 
           char buff[100];
           sprintf(buff,"bin%d",i);
@@ -277,7 +280,6 @@ void PurityAnalysis::run()
 
           hbin->SetBinContent(i,ml.getVal());
           hbin->SetBinError(i,ml.getError());
-
         }
     }
 
@@ -286,9 +288,19 @@ void PurityAnalysis::run()
       std::cout << "Bin " << i << ": ml=" << results[i].meanlandau << "  sl=" << results[i].widthlandau << "  mg=" << results[i].meangauss << "  sg=" << results[i].widthgauss << "  chi2ndf=" << results[i].chi2ndf << std::endl;
     }
 
+  TF1 * expo = new TF1("expo","[0]*exp(-x/[1])",0,2011);
+  expo->SetParNames("dQdx0","eLifetime");
+  expo->SetParameters(3000,3000);
+
+  gStyle->SetOptStat(0);
+  gStyle->SetOptFit(1);
   TCanvas * canv2 = new TCanvas("canv2","canv2",1600,800);
   canv2->cd();
+  hbin->Fit("expo","R");
   hbin->Draw();
+  hbin->GetYaxis()->SetRangeUser(minMPV-100,maxMPV+100);
+  hbin->GetXaxis()->SetTitle("Drift Time (#mu s)");
+  hbin->GetYaxis()->SetTitle("dQ/dx (ADC/cm)");
 
   TCanvas * canv3 = new TCanvas("canv3","canv3",1600,800);
   canv3->cd();
