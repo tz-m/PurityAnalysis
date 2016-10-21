@@ -115,7 +115,7 @@ Bool_t Cuts::ChannelPass(const types::HitInfo * hit)
 Bool_t Cuts::HitPass(const types::HitInfo * hit)
 {
   Bool_t realhitpass = (GetAnalysisCutBool("All","FitRealHit") == hit->fitrealhit);
-  Bool_t consistenttime = fabs(hit->peaktime - hit->peaktimeFilter) < 5;
+  Bool_t consistenttime = true; //fabs(hit->peaktime - hit->peaktimeFilter) < 5;
   return realhitpass && consistenttime;
 }
 

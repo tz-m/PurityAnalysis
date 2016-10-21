@@ -32,7 +32,7 @@ void GraphChargeDistributions::run()
   TH1F * shortd_fake = new TH1F("shortd_fake","Hit Charge Distribution -- Fake Hits",200,mincharge,maxcharge);
   TH1F * longd_fake = new TH1F("longd_fake","Hit Charge Distribution -- Fake Hits",200,mincharge,maxcharge);
   std::cout << "Filling Histograms" << std::endl;
-  for (auto const & hititr : *(file.GetHitMap()))
+  for (auto const & hititr : *(file->GetHitMap()))
     {
       const types::HitInfo * hit = &(hititr.second);
       if (cuts.ChannelPass(hit) && cuts.CounterPass(hit))

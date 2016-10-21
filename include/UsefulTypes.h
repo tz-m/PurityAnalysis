@@ -11,6 +11,7 @@ namespace types {
   struct HitInfo {
     Int_t run;
     Int_t event;
+    Double_t t0;
     UInt_t c1;
     UInt_t c2;
     UInt_t trignum;
@@ -20,9 +21,13 @@ namespace types {
     Float_t c2x;
     Float_t c2y;
     Float_t c2z;
+    Float_t distancecut;
     Int_t channel;
+    Int_t wire;
     Int_t tpc;
     Int_t signalsize;
+    std::vector<Float_t> signal;
+    std::vector<Float_t> signalFilter;
     Float_t baseline;
     Float_t rms;
     Float_t baselineFilter;
@@ -68,6 +73,35 @@ namespace types {
     Bool_t fitsuccess;
     Bool_t fitrealhit;
     Float_t segmentlength;
+    Bool_t assumedhit;
+    Int_t numGoodHitsChan;
+    Int_t nwiresTPC0;
+    Int_t nwiresTPC1;
+    Int_t nwiresTPC2;
+    Int_t nwiresTPC3;
+    Int_t nwiresTPC4;
+    Int_t nwiresTPC5;
+    Int_t nwiresTPC6;
+    Int_t nwiresTPC7;
+    Float_t prebaseline;
+    Float_t postbaseline;
+    Float_t prebaserms;
+    Float_t postbaserms;
+    Int_t trackid;
+    Int_t numtrajpts;
+    Double_t tracklength;
+    Bool_t isOnTrack;
+    Double_t dqdxatpt;
+    Int_t prevStartTick;
+    Int_t prevEndTick;
+    Float_t prevPeakTime;
+    Float_t prevSigmaPeakTime;
+    Float_t prevRMS;
+    Float_t prevPeakAmplitude;
+    Float_t prevSigmaPeakAmplitude;
+    Float_t prevSummedADC;
+    Float_t prevIntegral;
+    Float_t prevSigmaIntegral;
   };
 
   typedef std::map<UInt_t,HitInfo> HitMap;

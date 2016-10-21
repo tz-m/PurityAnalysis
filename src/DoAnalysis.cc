@@ -2,6 +2,7 @@
 #include "GraphChargeDistributions.h"
 #include "GraphAvgHitsWires.h"
 #include "PurityAnalysis.h"
+#include "ScanningHitFinderTest.h"
 
 #include "InputParser.h"
 
@@ -79,6 +80,13 @@ int main(int argc, char** argv)
           PurityAnalysis pa;
           pa.Setup(datafile,configfile);
           pa.run();
+        }
+      else if (analysis == "ScanningHitFinderTest")
+        {
+          std::cout << "DoAnalysis -- Doing ScanningHitFinderTest" << std::endl;
+          ScanningHitFinderTest shft;
+          shft.Setup(datafile,configfile);
+          shft.run();
         }
       else
         {

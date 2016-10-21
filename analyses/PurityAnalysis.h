@@ -3,10 +3,12 @@
 
 #include "Analysis.h"
 
+#include "THStack.h"
 #include "TFitResult.h"
 #include "TSystem.h"
 #include "TImage.h"
 #include "TPaveLabel.h"
+#include "TVirtualFitter.h"
 #include "RooRealVar.h"
 #include "RooDataSet.h"
 #include "RooDataHist.h"
@@ -28,7 +30,9 @@ struct ChargeHistogram
 {
   TH1F * hist;
   Float_t binlow;
+  Float_t bincenter;
   Float_t binhigh;
+  Float_t binwidth;
 };
 
 struct FitResult
@@ -60,9 +64,13 @@ void PurityAnalysis::run()
 
   UInt_t Nbins = 22;
   Float_t drifttimemax = 2012;
-  Float_t ADCcutoff = 10000;
+  Float_t ADCcutofflow = 400; //-700;
+  Float_t ADCcutoffhigh = 5000; //23000;
 
-  RooRealVar charge("charge","Hit Integral (ADC*tick)",0,ADCcutoff);
+  TH1F * found = new TH1F("found","Hits Found",200,ADCcutofflow,ADCcutoffhigh);
+  TH1F * assumed = new TH1F("assumed","Assumed Hits",200,ADCcutofflow,ADCcutoffhigh);
+
+  RooRealVar charge("charge","Hit Integral (ADC*tick)",ADCcutofflow,ADCcutoffhigh);
   RooRealVar tdrift("tdrift","tdrift",0,drifttimemax);
   RooDataSet * chgdata = new RooDataSet("chgdata","chgdata",RooArgSet(tdrift,charge));
 
@@ -71,32 +79,57 @@ void PurityAnalysis::run()
     {
       timeBinHist[i].binlow = i*(drifttimemax/Nbins);
       timeBinHist[i].binhigh = (i+1)*(drifttimemax/Nbins);
-      timeBinHist[i].hist = new TH1F(TString::Format("h%i",i),TString::Format("RobustHitFinder, Bin %i, %.2f <= t < %.2f (us)",i,timeBinHist[i].binlow,timeBinHist[i].binhigh),100,0,ADCcutoff);
+      timeBinHist[i].bincenter = (timeBinHist[i].binlow + timeBinHist[i].binhigh)/2.0;
+      timeBinHist[i].binwidth = timeBinHist[i].binhigh - timeBinHist[i].binlow;
+      timeBinHist[i].hist = new TH1F(TString::Format("h%i",i),TString::Format("RobustHitFinder, Bin %i, %.2f <= t < %.2f (us)",i,timeBinHist[i].binlow,timeBinHist[i].binhigh),100,0,drifttimemax);
     }
 
-  TH1F * hlong = new TH1F("hlong","Hit Integral (ADC)",1000,0,0);
+  TH1F * hlong = new TH1F("hlong","Hit Integral (ADC)",1000,ADCcutofflow,ADCcutoffhigh);
 
   std::map<Int_t, std::vector<std::pair<Float_t,Float_t> > > hitmap;
 
-  for (auto const & hititr : *(file.GetHitMap()))
+  for (auto const & hititr : *(file->GetHitMap()))
     {
       const types::HitInfo * hit = &(hititr.second);
+      if (hit->run >= 15483 && hit->run <= 15502) continue;
+      if (hit->run == 15593) continue;
+      if (hit->run >= 15634 && hit->run <= 15643) continue;
+      if (hit->run >= 15664 && hit->run <= 15674) continue;
+      if (hit->run == 15823 || hit->run == 15914 || hit->run == 15940 || hit->run == 15980 || hit->run == 16025 || hit->run == 16083 || hit->run == 16147 || hit->run == 16586) continue;
+      if (hit->run >= 16593 && hit->run <= 16596) continue;
+      if (hit->channel == 566 || hit->channel == 885 || hit->channel == 1547) continue;
+      //if (hit->pedmean < 200 || hit->pedmean > 1500) continue;
+      //if (hit->pedrms < 7 || hit->pedrms > 30) continue;
       //if (!(*countercut)) continue;
       //if ((*tpc) % 2 == 0) continue;
       //if (!(*fitrealhit)) continue;
       if (cuts.ChannelPass(hit) &&
-          cuts.CounterPass(hit) &&
+          //cuts.CounterPass(hit) &&
           cuts.HitPass(hit))
         {
-          hitmap[hit->channel].push_back(std::make_pair(hit->hitt,(hit->integral)/(hit->segmentlength)));
+          if (!(hit->assumedhit)) found->Fill(hit->integral/hit->segmentlength);
+          if (hit->assumedhit) assumed->Fill(hit->integral/hit->segmentlength);
+          //std::cout << "making hit at tick " << hit->peaktick << " with dqdx " << hit->integral / hit->segmentlength << std::endl;
+          if (!(hit->assumedhit)) hitmap[hit->channel].push_back(std::make_pair(hit->peaktime,(hit->integral)/(hit->segmentlength)));
         }
     }
+
+  TCanvas * ctest = new TCanvas("ctest","ctest",2000,1600);
+  ctest->cd();
+  std::cout << "Found Number = " << found->GetEntries() << "  Assumed Number = " << assumed->GetEntries() << std::endl;
+  THStack * hs = new THStack("hs","Found and Assumed Hits");
+  found->SetFillColor(kRed);
+  assumed->SetFillColor(kBlue);
+  hs->Add(found);
+  hs->Add(assumed);
+  hs->Draw();
+  //ctest->WaitPrimitive();
 
   for (auto & i_chan : hitmap)
     {
       for (auto & i_hit : i_chan.second)
         {
-          if (i_hit.second < ADCcutoff)
+          if (i_hit.second < ADCcutoffhigh && i_hit.second > ADCcutofflow)
             {
               hlong->Fill(i_hit.second);
             }
@@ -134,9 +167,16 @@ void PurityAnalysis::run()
    workspace->import(gauss);
    workspace->import(*chgdata);
  */
-  TH1F * hbin = new TH1F("hbin","Most Probable dQ/dx",Nbins,0,2011);
+  TGraphAsymmErrors * hbin = new TGraphAsymmErrors(Nbins);
+  hbin->SetTitle("Most Probable dQ/dx");
+  //TH1F * hbin = new TH1F("hbin","Most Probable dQ/dx",Nbins,0,drifttimemax);
   Double_t minMPV = 99999;
   Double_t maxMPV = -99999;
+
+  TGraphAsymmErrors * gw = new TGraphAsymmErrors(Nbins);
+  gw->SetTitle("Width of Gaussian in Convolution");
+  TGraphAsymmErrors * lw = new TGraphAsymmErrors(Nbins);
+  lw->SetTitle("Width of Landau in Convolution");
 
   for (UInt_t i = 0; i < Nbins; i++)
     {
@@ -145,37 +185,37 @@ void PurityAnalysis::run()
           char shortname[100];
           sprintf(shortname,"dQdx_bin%d",i);
 
-          //Float_t maxbin = timeBinHist[i].hist->GetBinCenter(timeBinHist[i].hist->GetMaximumBin());
-          Float_t maxbin = 2800;
+          Float_t maxbin = timeBinHist[i].hist->GetBinCenter(timeBinHist[i].hist->GetMaximumBin());
+          //Float_t maxbin = 2800;
 
           // Setup component pdfs
           // --------------------
 
           //setup observable
-          //charge.setRange(shortname,0.1*maxbin,3*maxbin);
-          charge.setRange(shortname,0,ADCcutoff);
+          charge.setRange(shortname,maxbin-1000,maxbin+1500);
+          //charge.setRange(shortname,ADCcutofflow,ADCcutoffhigh);
 
           //setup landau(t,ml,sl)
           ml.setVal(maxbin);
-          ml.setMin(maxbin-1000);
-          ml.setMax(maxbin+1000);
-          sl.setVal(850);
-          sl.setMin(60);
-          sl.setMax(2000);
+          ml.setMin(maxbin-1000); //0);
+          ml.setMax(maxbin+1000); //0);
+          sl.setVal(70); //850);
+          sl.setMin(50); //60);
+          sl.setMax(200); //2000);
 
           //setup gauss(t,mg,sg)
           //mg.setVal(1);
           //mg.setMin(-100);
           //mg.setMax(100);
-          sg.setVal(550);
-          sg.setMin(10);
-          sg.setMax(2000);
+          sg.setVal(300); //550);
+          sg.setMin(100); //10);
+          sg.setMax(500); //2000);
 
           // construct convolution pdf
           // -------------------------
 
           // set num bins to be used for FFT sampling
-          charge.setBins(1000,"fft");
+          charge.setBins(10000,"fft");
 
           // fit convoluted pdf to binHist
           // -----------------------------
@@ -278,8 +318,12 @@ void PurityAnalysis::run()
           delete img2;
           delete img3;
 
-          hbin->SetBinContent(i,ml.getVal());
-          hbin->SetBinError(i,ml.getError());
+          hbin->SetPoint(i,timeBinHist[i].bincenter,ml.getVal());
+          hbin->SetPointError(i,(timeBinHist[i].binwidth)/2.0, (timeBinHist[i].binwidth)/2.0,ml.getError(),ml.getError());
+          gw->SetPoint(i,timeBinHist[i].bincenter,sg.getVal());
+          gw->SetPointError(i,(timeBinHist[i].binwidth)/2.0,(timeBinHist[i].binwidth)/2.0,sg.getError(),sg.getError());
+          lw->SetPoint(i,timeBinHist[i].bincenter,sl.getVal());
+          lw->SetPointError(i,(timeBinHist[i].binwidth)/2.0,(timeBinHist[i].binwidth)/2.0,sl.getError(),sl.getError());
         }
     }
 
@@ -288,7 +332,7 @@ void PurityAnalysis::run()
       std::cout << "Bin " << i << ": ml=" << results[i].meanlandau << "  sl=" << results[i].widthlandau << "  mg=" << results[i].meangauss << "  sg=" << results[i].widthgauss << "  chi2ndf=" << results[i].chi2ndf << std::endl;
     }
 
-  TF1 * expo = new TF1("expo","[0]*exp(-x/[1])",0,2011);
+  TF1 * expo = new TF1("expo","[0]*exp(-x/[1])",0,drifttimemax);
   expo->SetParNames("dQdx0","eLifetime");
   expo->SetParameters(3000,3000);
 
@@ -297,15 +341,39 @@ void PurityAnalysis::run()
   TCanvas * canv2 = new TCanvas("canv2","canv2",1600,800);
   canv2->cd();
   hbin->Fit("expo","R");
-  hbin->Draw();
+  hbin->Draw("ap");
+  hbin->SetMarkerStyle(kFullDotLarge);
+  hbin->SetMarkerSize(2);
+
+  TH1F * hint = new TH1F("hint","95#% confidence band",100,0,drifttimemax);
+  (TVirtualFitter::GetFitter())->GetConfidenceIntervals(hint,0.68);
+  hint->SetStats(kFALSE);
+  hint->SetFillColorAlpha(kRed,0.35);
+  hint->Draw("e3 same");
+
   hbin->GetYaxis()->SetRangeUser(minMPV-100,maxMPV+100);
   hbin->GetXaxis()->SetTitle("Drift Time (#mu s)");
   hbin->GetYaxis()->SetTitle("dQ/dx (ADC/cm)");
 
   TCanvas * canv3 = new TCanvas("canv3","canv3",1600,800);
   canv3->cd();
-  hlong->Draw();
+  gw->Draw("ap");
+  gw->SetMarkerStyle(kFullDotLarge);
+  gw->SetMarkerSize(2);
+  gw->GetXaxis()->SetTitle("Drift Time (#mu s)");
 
+  TCanvas * canv4 = new TCanvas("canv4","canv4",1600,800);
+  canv4->cd();
+  lw->Draw("ap");
+  lw->SetMarkerStyle(kFullDotLarge);
+  lw->SetMarkerSize(2);
+  lw->GetXaxis()->SetTitle("Drift Time (#mu s)");
+
+/*
+   TCanvas * canv3 = new TCanvas("canv3","canv3",1600,800);
+   canv3->cd();
+   hlong->Draw();
+ */
 }
 
 #endif

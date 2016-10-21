@@ -30,7 +30,7 @@ void GraphAvgHitsWires::run()
   std::map<UInt_t, Float_t> counterx;
 
   std::cout << "GraphAvgHitsWires::run() -- Counting " << std::endl;
-  for (auto const & hititr : *(file.GetHitMap()))
+  for (auto const & hititr : *(file->GetHitMap()))
     {
       const types::HitInfo * hit = &(hititr.second);
       if (cuts.ChannelPass(hit) && cuts.CounterPass(hit))
@@ -74,7 +74,7 @@ void GraphAvgHitsWires::run()
 
   std::map<UInt_t,Float_t> cpairHits;
   std::map<UInt_t,std::map<Int_t,std::map<Int_t,Float_t> > > cpairChanHits;
-  for (auto const & hititr : *(file.GetHitMap()))
+  for (auto const & hititr : *(file->GetHitMap()))
     {
       const types::HitInfo * hit = &(hititr.second);
       if (cuts.ChannelPass(hit) && cuts.CounterPass(hit) && cuts.HitPass(hit))
