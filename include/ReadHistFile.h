@@ -40,12 +40,33 @@ public:
 private:
   types::HitMap hits;
   std::vector<Int_t> runs;
+  UInt_t i;
+
+
+};
+
+ReadHistFile::ReadHistFile()
+{
+}
+
+ReadHistFile::ReadHistFile(std::string filename)
+{
+  TFile * file = TFile::Open(filename.c_str(),"READ");
+  if (!file || file->IsZombie())
+    {
+      std::stringstream ss;
+      ss << "ReadHistFile::ReadFile() -- Input file is not read";
+      throw std::runtime_error(ss.str());
+    }
+
+  TTree * tree = (TTree*)file->Get("robusthit/RobustHitFinder");
+  //!!!!!!! For some reason, I used robusthit/RobustHitFinder for some, and robusthits/RobustHitFinder for others. Check both!
 
   TTreeReader reader;
 
   TTreeReaderValue<Int_t> *run;
   TTreeReaderValue<Int_t> *event;
-  TTreeReaderValue<Double_t> *t0;
+  //TTreeReaderValue<Double_t> *t0;
   TTreeReaderValue<UInt_t> *c1;
   TTreeReaderValue<UInt_t> *c2;
   TTreeReaderValue<UInt_t> *trignum;
@@ -55,21 +76,22 @@ private:
   TTreeReaderValue<Float_t> *c2x;
   TTreeReaderValue<Float_t> *c2y;
   TTreeReaderValue<Float_t> *c2z;
-  TTreeReaderValue<Float_t> *distancecut;
+  //TTreeReaderValue<Float_t> *distancecut;
   TTreeReaderValue<Int_t> *channel;
-  TTreeReaderValue<Int_t> *wire;
+  //TTreeReaderValue<Int_t> *wire;
   TTreeReaderValue<Int_t> *tpc;
   TTreeReaderValue<Int_t> *signalsize;
-  TTreeReaderArray<Float_t> * signal;
-  TTreeReaderArray<Float_t> * signalFilter;
+  //TTreeReaderArray<Float_t> * signal;
+  //TTreeReaderArray<Float_t> * signalFilter;
   TTreeReaderValue<Float_t> *baseline;
   TTreeReaderValue<Float_t> *rms;
   TTreeReaderValue<Float_t> *baselineFilter;
   TTreeReaderValue<Float_t> *rmsFilter;
-  TTreeReaderValue<Float_t> *pedmean;
-  TTreeReaderValue<Float_t> *pedrms;
+  //TTreeReaderValue<Float_t> *pedmean;
+  //TTreeReaderValue<Float_t> *pedrms;
   TTreeReaderValue<Float_t> *integral;
   TTreeReaderValue<Float_t> *integralFilter;
+  TTreeReaderValue<Float_t> *sumADC;
   TTreeReaderValue<Float_t> *sigmaintegral;
   TTreeReaderValue<Float_t> *sigmaintegralFilter;
   TTreeReaderValue<Float_t> *amplitude;
@@ -108,53 +130,37 @@ private:
   TTreeReaderValue<Bool_t> *fitrealhit;
   TTreeReaderValue<Float_t> *segmentlength;
   TTreeReaderValue<Bool_t> *assumedhit;
-  TTreeReaderValue<Int_t> *numGoodHitsChan;
-  TTreeReaderValue<Int_t> *nwiresTPC0;
-  TTreeReaderValue<Int_t> *nwiresTPC1;
-  TTreeReaderValue<Int_t> *nwiresTPC2;
-  TTreeReaderValue<Int_t> *nwiresTPC3;
-  TTreeReaderValue<Int_t> *nwiresTPC4;
-  TTreeReaderValue<Int_t> *nwiresTPC5;
-  TTreeReaderValue<Int_t> *nwiresTPC6;
-  TTreeReaderValue<Int_t> *nwiresTPC7;
-  TTreeReaderValue<Float_t> *prebaseline;
-  TTreeReaderValue<Float_t> *postbaseline;
-  TTreeReaderValue<Float_t> *prebaserms;
-  TTreeReaderValue<Float_t> *postbaserms;
-  TTreeReaderValue<Int_t> *trackid;
-  TTreeReaderValue<Int_t> *numtrajpts;
-  TTreeReaderValue<Double_t> *tracklength;
-  TTreeReaderValue<Bool_t> *isOnTrack;
-  TTreeReaderValue<Double_t> *dqdxatpt;
-  TTreeReaderValue<Int_t> *prevStartTick;
-  TTreeReaderValue<Int_t> *prevEndTick;
-  TTreeReaderValue<Float_t> *prevPeakTime;
-  TTreeReaderValue<Float_t> *prevSigmaPeakTime;
-  TTreeReaderValue<Float_t> *prevRMS;
-  TTreeReaderValue<Float_t> *prevPeakAmplitude;
-  TTreeReaderValue<Float_t> *prevSigmaPeakAmplitude;
-  TTreeReaderValue<Float_t> *prevSummedADC;
-  TTreeReaderValue<Float_t> *prevIntegral;
-  TTreeReaderValue<Float_t> *prevSigmaIntegral;
+/*  TTreeReaderValue<Int_t> *numGoodHitsChan;
+   TTreeReaderValue<Int_t> *nwiresTPC0;
+   TTreeReaderValue<Int_t> *nwiresTPC1;
+   TTreeReaderValue<Int_t> *nwiresTPC2;
+   TTreeReaderValue<Int_t> *nwiresTPC3;
+   TTreeReaderValue<Int_t> *nwiresTPC4;
+   TTreeReaderValue<Int_t> *nwiresTPC5;
+   TTreeReaderValue<Int_t> *nwiresTPC6;
+   TTreeReaderValue<Int_t> *nwiresTPC7;
+   TTreeReaderValue<Float_t> *prebaseline;
+   TTreeReaderValue<Float_t> *postbaseline;
+   TTreeReaderValue<Float_t> *prebaserms;
+   TTreeReaderValue<Float_t> *postbaserms;
+   TTreeReaderValue<Int_t> *trackid;
+   TTreeReaderValue<Int_t> *numtrajpts;
+   TTreeReaderValue<Double_t> *tracklength;
+   TTreeReaderValue<Bool_t> *isOnTrack;
+   TTreeReaderValue<Double_t> *dqdxatpt;
+   TTreeReaderValue<Int_t> *prevStartTick;
+   TTreeReaderValue<Int_t> *prevEndTick;
+   TTreeReaderValue<Float_t> *prevPeakTime;
+   TTreeReaderValue<Float_t> *prevSigmaPeakTime;
+   TTreeReaderValue<Float_t> *prevRMS;
+   TTreeReaderValue<Float_t> *prevPeakAmplitude;
+   TTreeReaderValue<Float_t> *prevSigmaPeakAmplitude;
+   TTreeReaderValue<Float_t> *prevSummedADC;
+   TTreeReaderValue<Float_t> *prevIntegral;
+   TTreeReaderValue<Float_t> *prevSigmaIntegral;
+ */
 
-};
 
-ReadHistFile::ReadHistFile()
-{
-}
-
-ReadHistFile::ReadHistFile(std::string filename)
-{
-  TFile * file = TFile::Open(filename.c_str(),"READ");
-  if (!file || file->IsZombie())
-    {
-      std::stringstream ss;
-      ss << "ReadHistFile::ReadFile() -- Input file is not read";
-      throw std::runtime_error(ss.str());
-    }
-
-  TTree * tree = (TTree*)file->Get("robusthit/RobustHitFinder");
-  //!!!!!!! For some reason, I used robusthit/RobustHitFinder for some, and robusthits/RobustHitFinder for others. Check both!
   reader.SetTree(tree);
 
   if (tree->GetBranchStatus("run")) run = new TTreeReaderValue<Int_t>(reader,"run");
@@ -174,8 +180,8 @@ ReadHistFile::ReadHistFile(std::string filename)
   //if (tree->GetBranchStatus("wire")) wire = new TTreeReaderValue<Int_t>(reader,"wire");
   if (tree->GetBranchStatus("tpc")) tpc = new TTreeReaderValue<Int_t>(reader,"tpc");
   if (tree->GetBranchStatus("signalsize")) signalsize = new TTreeReaderValue<Int_t>(reader,"signalsize");
-  if (tree->GetBranchStatus("signal")) signal = new TTreeReaderArray<Float_t>(reader,"signal");
-  if (tree->GetBranchStatus("signalFilter")) signalFilter = new TTreeReaderArray<Float_t>(reader,"signalFilter");
+  //if (tree->GetBranchStatus("signal")) signal = new TTreeReaderArray<Float_t>(reader,"signal");
+  //if (tree->GetBranchStatus("signalFilter")) signalFilter = new TTreeReaderArray<Float_t>(reader,"signalFilter");
   if (tree->GetBranchStatus("baseline")) baseline = new TTreeReaderValue<Float_t>(reader,"baseline");
   if (tree->GetBranchStatus("rms")) rms = new TTreeReaderValue<Float_t>(reader,"rms");
   if (tree->GetBranchStatus("baselineFilter")) baselineFilter = new TTreeReaderValue<Float_t>(reader,"baselineFilter");
@@ -184,6 +190,7 @@ ReadHistFile::ReadHistFile(std::string filename)
   //if (tree->GetBranchStatus("pedrms")) pedrms = new TTreeReaderValue<Float_t>(reader,"pedrms");
   if (tree->GetBranchStatus("integral")) integral = new TTreeReaderValue<Float_t>(reader,"integral");
   if (tree->GetBranchStatus("integralFilter")) integralFilter = new TTreeReaderValue<Float_t>(reader,"integralFilter");
+  if (tree->GetBranchStatus("sumADC")) sumADC = new TTreeReaderValue<Float_t>(reader,"sumADC");
   if (tree->GetBranchStatus("sigmaintegral")) sigmaintegral = new TTreeReaderValue<Float_t>(reader,"sigmaintegral");
   if (tree->GetBranchStatus("sigmaintegralFilter")) sigmaintegralFilter = new TTreeReaderValue<Float_t>(reader,"sigmaintegralFilter");
   if (tree->GetBranchStatus("amplitude")) amplitude = new TTreeReaderValue<Float_t>(reader,"amplitude");
@@ -250,13 +257,11 @@ ReadHistFile::ReadHistFile(std::string filename)
      if (tree->GetBranchStatus("prevSummedADC")) prevSummedADC = new TTreeReaderValue<Float_t>(reader,"prevSummedADC");
      if (tree->GetBranchStatus("prevIntegral")) prevIntegral = new TTreeReaderValue<Float_t>(reader,"prevIntegral");
      if (tree->GetBranchStatus("prevSigmaIntegral")) prevSigmaIntegral = new TTreeReaderValue<Float_t>(reader,"prevSigmaIntegral");*/
-}
 
-UInt_t ReadHistFile::ReadFile()
-{
+
   std::cout << "ReadHistFile::ReadFile() -- Reading file " << std::endl;
 
-  UInt_t i = 0;
+  i = 0;
   while (reader.Next())
     {
       types::HitInfo hi;
@@ -287,6 +292,7 @@ UInt_t ReadHistFile::ReadFile()
       //if (pedrms!=nullptr) hi.pedrms = **pedrms;
       if (integral!=nullptr) hi.integral = **integral;
       if (integralFilter!=nullptr) hi.integralFilter = **integralFilter;
+      if (sumADC!=nullptr) hi.sumADC = **sumADC;
       if (sigmaintegral!=nullptr) hi.sigmaintegral = **sigmaintegral;
       if (sigmaintegralFilter!=nullptr) hi.sigmaintegralFilter = **sigmaintegralFilter;
       if (amplitude!=nullptr) hi.amplitude = **amplitude;
@@ -334,7 +340,7 @@ UInt_t ReadHistFile::ReadFile()
          if (nwiresTPC5!=nullptr) hi.nwiresTPC5 = **nwiresTPC5;
          if (nwiresTPC6!=nullptr) hi.nwiresTPC6 = **nwiresTPC6;
          if (nwiresTPC7!=nullptr) hi.nwiresTPC7 = **nwiresTPC7;
-         /*if (prebaseline!=nullptr) hi.prebaseline = **prebaseline;
+         if (prebaseline!=nullptr) hi.prebaseline = **prebaseline;
          if (postbaseline!=nullptr) hi.postbaseline = **postbaseline;
          if (prebaserms!=nullptr) hi.prebaserms = **prebaserms;
          if (postbaserms!=nullptr) hi.postbaserms = **postbaserms;
@@ -357,8 +363,15 @@ UInt_t ReadHistFile::ReadFile()
       i++;
       //std::cout << "hi.run=" << hi.run << std::endl;
       if (std::find(runs.begin(),runs.end(),hi.run) == runs.end()) runs.push_back(hi.run);
+      //if (i>1e5) break;
     }
   std::cout << "ReadHistFile::ReadFile() -- Finished reading file. " << i << " hits were found in " << runs.size() << " runs." << std::endl;
+
+  file->Close();
+}
+
+UInt_t ReadHistFile::ReadFile()
+{
   return i;
 }
 

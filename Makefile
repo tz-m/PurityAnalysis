@@ -12,7 +12,7 @@ INC_PARAMS=$(foreach d, $(INC), -I$d)
 CC=`root-config --cxx`
 CFLAGS=-c -g -Wall `root-config --cflags` $(INC_PARAMS)
 LDFLAGS=`root-config --ldflags`
-LDLIBS=`root-config --glibs` -lTreePlayer -lRooFit -lRooFitCore -lMinuit
+LDLIBS=`root-config --glibs` -lTreePlayer -lRooFit -lRooFitCore -lMinuit -lMathMore
 
 .PHONY: all clean
 

@@ -36,6 +36,7 @@ namespace types {
     Float_t pedrms;
     Float_t integral;
     Float_t integralFilter;
+    Float_t sumADC;
     Float_t sigmaintegral;
     Float_t sigmaintegralFilter;
     Float_t amplitude;
