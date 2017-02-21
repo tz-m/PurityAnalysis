@@ -24,6 +24,7 @@ public:
 
   Float_t GetAnalysisCutFloat(std::string ananame, std::string parname);
   Bool_t GetAnalysisCutBool(std::string ananame, std::string parname);
+  std::string GetAnalysisCutString(std::string ananame, std::string parname);
 
   PedCheck * GetPedCheckPtr() {
     return pc;
@@ -34,6 +35,7 @@ private:
 
   types::AnalysisCuts_F anacutsfloat;
   types::AnalysisCuts_B anacutsbool;
+  types::AnalysisCuts_S anacutsstring;
 };
 
 Cuts::Cuts()
@@ -65,6 +67,10 @@ Bool_t Cuts::PrepareCuts(std::string configfile, std::vector<Int_t> runvec)
           if (TYPEOFPAR == "float")
             {
               anacutsfloat[NAMEOFANA][NAMEOFPAR] = stof(PAR);
+            }
+          if (TYPEOFPAR == "string")
+            {
+              anacutsstring[NAMEOFANA][NAMEOFPAR] = PAR;
             }
         }
     }
@@ -103,6 +109,17 @@ Bool_t Cuts::GetAnalysisCutBool(std::string ananame, std::string parname)
       throw std::runtime_error(ss.str());
     }
   return anacutsbool[ananame][parname];
+}
+
+std::string Cuts::GetAnalysisCutString(std::string ananame, std::string parname)
+{
+  if (anacutsstring[ananame].find(parname) == anacutsstring[ananame].end())
+    {
+      std::stringstream ss;
+      ss << "Analysis \"" << ananame << "\" or parameter \"" << parname << "\" was not found";
+      throw std::runtime_error(ss.str());
+    }
+  return anacutsstring[ananame][parname];
 }
 
 Bool_t Cuts::ChannelPass(const types::HitInfo * hit)

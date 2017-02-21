@@ -1,8 +1,3 @@
-#ifndef PURITYANALYSIS_H
-#define PURITYANALYSIS_H
-
-#include "Analysis.h"
-
 #include "THStack.h"
 #include "TFitResult.h"
 #include "TSystem.h"
@@ -35,6 +30,36 @@
 #include "Math/VavilovAccurate.h"
 #include "RooFunctorBinding.h"
 #include "Math/Functor.h"
+
+#include "TTree.h"
+#include "TFile.h"
+#include "TROOT.h"
+#include "TTreeReader.h"
+#include "TTreeReaderArray.h"
+#include "TTreeReaderValue.h"
+#include "TCanvas.h"
+#include "TPad.h"
+#include "TStyle.h"
+#include "TGaxis.h"
+#include "TPaveStats.h"
+#include "TGraph.h"
+#include "TGraphErrors.h"
+#include "TLegend.h"
+#include "TH1.h"
+#include "TH2.h"
+#include "TF1.h"
+
+#include <string>
+#include <sstream>
+#include <map>
+#include <algorithm>
+
+#ifdef __MAKECINT__
+#pragma link C++ class vector<double>+;
+#pragma link C++ class vector<int>+;
+#pragma link C++ class vector<float>+;
+#pragma link C++ class vector<bool>+;
+#endif
 
 struct ChargeHistogram
 {
@@ -104,23 +129,287 @@ struct HitSave {
   Float_t unscaleddqdx;
 };
 
+struct HitInfo {
+  Int_t run;
+  Int_t subrun;
+  Int_t event;
+  Double_t t0;
+  UInt_t c1;
+  UInt_t c2;
+  UInt_t trignum;
+  Float_t c1x;
+  Float_t c1y;
+  Float_t c1z;
+  Float_t c2x;
+  Float_t c2y;
+  Float_t c2z;
+  Float_t distancecut;
+  std::vector<Int_t> channel;
+  std::vector<Int_t> wire;
+  std::vector<Int_t> tpc;
+  std::vector<Int_t> signalsize;
+  //std::vector<Float_t> signal;
+  //std::vector<Float_t> signalFilter;
+  std::vector<Float_t> baseline;
+  std::vector<Float_t> rms;
+  std::vector<Float_t> baselineFilter;
+  std::vector<Float_t> rmsFilter;
+  std::vector<Float_t> pedmean;
+  std::vector<Float_t> pedrms;
+  std::vector<Float_t> integral;
+  std::vector<Float_t> integralFilter;
+  std::vector<Float_t> sumADC;
+  std::vector<Float_t> sigmaintegral;
+  std::vector<Float_t> sigmaintegralFilter;
+  std::vector<Float_t> amplitude;
+  std::vector<Float_t> amplitudeFilter;
+  std::vector<Float_t> peaktick;
+  std::vector<Float_t> peaktickFilter;
+  std::vector<Float_t> peaktime;
+  std::vector<Float_t> peaktimeFilter;
+  std::vector<Int_t> begintick;
+  std::vector<Int_t> endtick;
+  std::vector<Int_t> width;
+  std::vector<Float_t> hitx;
+  std::vector<Float_t> hity;
+  std::vector<Float_t> hitz;
+  std::vector<Float_t> hiterrxlo;
+  std::vector<Float_t> hiterrxhi;
+  std::vector<Float_t> hiterrylo;
+  std::vector<Float_t> hiterryhi;
+  std::vector<Float_t> hiterrzlo;
+  std::vector<Float_t> hiterrzhi;
+  std::vector<Float_t> perpdist;
+  std::vector<Float_t> hitt;
+  std::vector<Float_t> driftdist;
+  std::vector<Bool_t> countercut;
+  Float_t fitconstant;
+  Float_t fitconstanterr;
+  Float_t fitlinear;
+  Float_t fitlinearerr;
+  Float_t fitquadratic;
+  Float_t fitquadraticerr;
+  Float_t fitchi2;
+  Float_t fitsumsqrresidual;
+  Float_t fitndf;
+  Float_t fitmle;
+  Bool_t fitsuccess;
+  std::vector<Bool_t> fitrealhit;
+  std::vector<Float_t> segmentlength;
+  std::vector<Bool_t> assumedhit;
+  std::vector<Int_t> numGoodHitsChan;
+  Int_t nwiresTPC0;
+  Int_t nwiresTPC1;
+  Int_t nwiresTPC2;
+  Int_t nwiresTPC3;
+  Int_t nwiresTPC4;
+  Int_t nwiresTPC5;
+  Int_t nwiresTPC6;
+  Int_t nwiresTPC7;
+};
 
-class PurityAnalysis : public Analysis {
+
+
+class PurityAnalysisAlt {
 public:
-  PurityAnalysis();
+  PurityAnalysisAlt();
   void run();
 
 private:
 
+  std::vector<HitInfo> hitvec;
+
   int getBinNumber( Float_t t, const std::vector<ChargeHistogram> & tbh );
+
+  TString infname;
+  TString outfname;
 
 };
 
-PurityAnalysis::PurityAnalysis()
+PurityAnalysisAlt::PurityAnalysisAlt()
 {
+  infname = "/home/mthiesse/PurityAnalysis/DataFiles/robust_newgain_mixer_3ms_mcscale1.8_hist.root";
+  outfname = "PurityAnalysis_newgain_3ms_mcscale1.8.root";
+  TFile * file = TFile::Open(infname,"READ");
+  if (!file || file->IsZombie())
+    {
+      std::stringstream ss;
+      ss << "ReadHistFile::ReadFile() -- Input file is not read";
+      throw std::runtime_error(ss.str());
+    }
+  TTreeReader reader("robusthit/RobustHitFinder",file);
+  TTreeReaderValue<Int_t> run(reader,"run");
+  TTreeReaderValue<Int_t> subrun(reader,"subrun");
+  TTreeReaderValue<Int_t> event(reader,"event");
+  TTreeReaderValue<Double_t> t0(reader,"t0");
+  TTreeReaderValue<UInt_t> c1(reader,"c1");
+  TTreeReaderValue<UInt_t> c2(reader,"c2");
+  TTreeReaderValue<UInt_t> trignum(reader,"trignum");
+  TTreeReaderValue<Float_t> c1x(reader,"c1x");
+  TTreeReaderValue<Float_t> c1z(reader,"c1z");
+  TTreeReaderValue<Float_t> c2x(reader,"c2x");
+  TTreeReaderValue<Float_t> c2z(reader,"c2z");
+  TTreeReaderValue<Float_t> distancecut(reader,"distancecut");
+  TTreeReaderArray<Int_t> channel(reader,"channel");
+  TTreeReaderArray<Int_t> wire(reader,"wire");
+  TTreeReaderArray<Int_t> tpc(reader,"tpc");
+  TTreeReaderArray<Float_t> rms(reader,"rms");
+  TTreeReaderArray<Float_t> baseline(reader,"baseline");
+  TTreeReaderArray<Float_t> pedmean(reader,"pedmean");
+  TTreeReaderArray<Float_t> pedrms(reader,"pedrms");
+  TTreeReaderArray<Float_t> integral(reader,"integral");
+  TTreeReaderArray<Float_t> sumADC(reader,"sumADC");
+  TTreeReaderArray<Float_t> sigmaintegral(reader,"sigmaintegral");
+  TTreeReaderArray<Float_t> amplitude(reader,"amplitude");
+  TTreeReaderArray<Float_t> peaktick(reader,"peaktick");
+  TTreeReaderArray<Float_t> peaktime(reader,"peaktime");
+  TTreeReaderArray<Int_t> begintick(reader,"begintick");
+  TTreeReaderArray<Int_t> endtick(reader,"endtick");
+  TTreeReaderArray<Int_t> width(reader,"width");
+  TTreeReaderArray<Float_t> hitx(reader,"hitx");
+  TTreeReaderArray<Float_t> hitz(reader,"hitz");
+  TTreeReaderArray<Float_t> hiterrxlo(reader,"hiterrxlo");
+  TTreeReaderArray<Float_t> hiterrxhi(reader,"hiterrxhi");
+  TTreeReaderArray<Float_t> hiterrzlo(reader,"hiterrzlo");
+  TTreeReaderArray<Float_t> hiterrzhi(reader,"hiterrzhi");
+  TTreeReaderArray<Float_t> perpdist(reader,"perpdist");
+  TTreeReaderArray<Float_t> hitt(reader,"hitt");
+  TTreeReaderArray<Float_t> driftdist(reader,"driftdist");
+  TTreeReaderValue<std::vector<Bool_t> > countercut(reader,"countercut");
+  TTreeReaderValue<Float_t> fitconstant(reader,"fitconstant");
+  TTreeReaderValue<Float_t> fitconstanterr(reader,"fitconstanterr");
+  TTreeReaderValue<Float_t> fitlinear(reader,"fitlinear");
+  TTreeReaderValue<Float_t> fitlinearerr(reader,"fitlinearerr");
+  TTreeReaderValue<Float_t> fitquadratic(reader,"fitquadratic");
+  TTreeReaderValue<Float_t> fitquadraticerr(reader,"fitquadraticerr");
+  TTreeReaderValue<Float_t> fitchi2(reader,"fitchi2");
+  TTreeReaderValue<Float_t> fitsumsqrresidual(reader,"fitsumsqrresidual");
+  TTreeReaderValue<Float_t> fitndf(reader,"fitndf");
+  TTreeReaderValue<Float_t> fitmle(reader,"fitmle");
+  TTreeReaderValue<Bool_t> fitsuccess(reader,"fitsuccess");
+  TTreeReaderValue<std::vector<Bool_t> > fitrealhit(reader,"fitrealhit");
+  TTreeReaderValue<std::vector<Bool_t> > assumedhit(reader,"assumedhit");
+  TTreeReaderArray<Float_t> segmentlength(reader,"segmentlength");
+  TTreeReaderArray<Int_t> numGoodHitsChan(reader,"numGoodHitsChan");
+
+  while (reader.Next())
+    {
+      HitInfo hf;
+      hf.run = *run;
+      hf.subrun = *subrun;
+      hf.event = *event;
+      hf.t0 = *t0;
+      hf.c1 = *c1;
+      hf.c2 = *c2;
+      hf.trignum = *trignum;
+      hf.c1x = *c1x;
+      hf.c1z = *c1z;
+      hf.c2x = *c2x;
+      hf.c2z = *c2z;
+      hf.distancecut = *distancecut;
+
+      int nchan = 0;
+      for (auto j : channel) ++nchan;
+      for (int j = 0; j < nchan; ++j) hf.channel.push_back(channel.At(j));
+
+      int nwire = 0;
+      for (auto j : wire) ++nwire;
+      for (int j = 0; j < nwire; ++j) hf.wire.push_back(wire.At(j));
+
+      int ntpc = 0;
+      for (auto j : tpc) ++ntpc;
+      for (int j = 0; j < ntpc; ++j) hf.tpc.push_back(tpc.At(j));
+
+      int nrms = 0;
+      for (auto j : rms) ++nrms;
+      for (int j = 0; j < nrms; ++j) hf.rms.push_back(rms.At(j));
+
+      int nbase = 0;
+      for (auto j : baseline) ++nbase;
+      for (int j = 0; j < nbase; ++j) hf.baseline.push_back(baseline.At(j));
+
+      int npm = 0;
+      for (auto j : pedmean) ++npm;
+      for (int j = 0; j < npm; ++j) hf.pedmean.push_back(pedmean.At(j));
+
+      int npr = 0;
+      for (auto j : pedrms) ++npr;
+      for (int j = 0; j < npr; ++j) hf.pedrms.push_back(pedrms.At(j));
+
+      int nint = 0;
+      for (auto j : integral) ++nint;
+      for (int j = 0; j < nint; ++j) hf.integral.push_back(integral.At(j));
+
+      //for (auto j : sumADC) hf.sumADC.push_back(*j);
+      //for (auto j : sigmaintegral) hf.sigmaintegral.push_back(*j);
+      //for (auto j : amplitude) hf.amplitude.push_back(*j);
+      //for (auto j : peaktick) hf.peaktick.push_back(*j);
+      //for (auto j : peaktime) hf.peaktime.push_back(*j);
+      //for (auto j : begintick) hf.begintick.push_back(*j);
+      //for (auto j : endtick) hf.endtick.push_back(*j);
+
+      int nwidth = 0;
+      for (auto j : width) ++nwidth;
+      for (int j = 0; j < nwidth; ++j) hf.width.push_back(width.At(j));
+
+      //for (auto j : hitx) hf.hitx.push_back(*j);
+      //for (auto j : hitz) hf.hitz.push_back(*j);
+      //for (auto j : hiterrxlo) hf.hiterrxlo.push_back(*j);
+      //for (auto j : hiterrxhi) hf.hiterrxhi.push_back(*j);
+      //for (auto j : hiterrzlo) hf.hiterrzlo.push_back(*j);
+      //for (auto j : hiterrzhi) hf.hiterrzhi.push_back(*j);
+      //for (auto j : perpdist) hf.perpdist.push_back(*j);
+
+      int nhitt = 0;
+      for (auto j : hitt) ++nhitt;
+      for (int j = 0; j < nhitt; ++j) hf.hitt.push_back(hitt.At(j));
+
+      int ndist = 0;
+      for (auto j : driftdist) ++ndist;
+      for (int j = 0; j < ndist; ++j) hf.driftdist.push_back(driftdist.At(j));
+
+      //for (auto j : countercut) hf.countercut.push_back(*j);
+
+      hf.fitconstant = *fitconstant;
+      hf.fitconstanterr = *fitconstanterr;
+      hf.fitlinear = *fitlinear;
+      hf.fitlinearerr = *fitlinearerr;
+      hf.fitquadratic = *fitquadratic;
+      hf.fitquadraticerr = *fitquadraticerr;
+      hf.fitchi2 = *fitchi2;
+      hf.fitsumsqrresidual = *fitsumsqrresidual;
+      hf.fitndf = *fitndf;
+      hf.fitmle = *fitmle;
+      hf.fitsuccess = *fitsuccess;
+
+      int nreal = 0;
+      for (auto j : *fitrealhit) ++nreal;
+      for (int j = 0; j < nreal; ++j) hf.fitrealhit.push_back((*fitrealhit)[j]);
+
+      int nass = 0;
+      for (auto j : *assumedhit) ++nass;
+      for (int j = 0; j < nass; ++j) hf.assumedhit.push_back((*assumedhit)[j]);
+
+      int nseg = 0;
+      for (auto j : segmentlength) ++nseg;
+      for (int j = 0; j < nseg; ++j) hf.segmentlength.push_back(segmentlength.At(j));
+
+      //for (auto j : numGoodHitsChan) hf.numGoodHitsChan.push_back(*j);
+
+      if (nchan != nwire || nwire != ntpc || ntpc != nrms || nrms != nbase || nbase != npm || npm != npr || npr != nint || nint != nwidth || nwidth != nhitt || nhitt != ndist || ndist != nreal || nreal != nass || nass != nseg)
+        {
+          std::cout << "Shit's fuk'd yo!" << std::endl;
+        }
+
+      hitvec.push_back(hf);
+    }
+
+  std::cout << hitvec.size() << " events read" << std::endl;
+  delete file;
+  this->run();
 }
 
-int PurityAnalysis::getBinNumber( Float_t t, const std::vector<ChargeHistogram> & tbh )
+int PurityAnalysisAlt::getBinNumber( Float_t t, const std::vector<ChargeHistogram> & tbh )
 {
   for ( UInt_t i_hist = 0; i_hist < tbh.size(); i_hist++ )
     {
@@ -132,21 +421,20 @@ int PurityAnalysis::getBinNumber( Float_t t, const std::vector<ChargeHistogram> 
   return -1;
 }
 
-void PurityAnalysis::run()
+void PurityAnalysisAlt::run()
 {
-  bool DoPull = cuts.GetAnalysisCutBool( "PurityAnalysis", "DoPull" );
-  bool DoResidual = cuts.GetAnalysisCutBool( "PurityAnalysis", "DoResidual" );
-  bool DoLxG = cuts.GetAnalysisCutBool( "PurityAnalysis", "DoLxG" );
-  bool DoVxG = cuts.GetAnalysisCutBool( "PurityAnalysis", "DoVxG" );
-  bool DoPG = cuts.GetAnalysisCutBool( "PurityAnalysis", "DoPG" );
-  float Nbinsfloat = cuts.GetAnalysisCutFloat( "PurityAnalysis", "Nbins" );
-  std::string fileoutname = cuts.GetAnalysisCutString( "PurityAnalysis", "FileOut");
+  bool DoPull = false;
+  bool DoResidual = false;
+  bool DoLxG = true;
+  bool DoVxG = false;
+  bool DoPG = false;
+  float Nbinsfloat = 22;
 
   UInt_t Nbins = ( UInt_t )Nbinsfloat;
   Float_t drifttimemax = 2012;
   Float_t ADCcutofflow, ADCcutoffhigh;
-  ADCcutofflow = cuts.GetAnalysisCutFloat( "PurityAnalysis", "ADCCutoffLow" );
-  ADCcutoffhigh = cuts.GetAnalysisCutFloat( "PurityAnalysis", "ADCCutoffHigh" );
+  ADCcutofflow = 200;
+  ADCcutoffhigh = 8000;
 
   TFile * scalefile = TFile::Open("scaleQ.root","READ");
   TProfile * scaleQ = (TProfile*)scalefile->Get("scaleQ");
@@ -163,9 +451,9 @@ void PurityAnalysis::run()
   effQ->SetDirectory(0);
   efffile->Close();
 
-  Double_t mcscale = cuts.GetAnalysisCutFloat("PurityAnalysis","mcscale");
+  Double_t mcscale = 1.0;
 
-  TFile * fileout = TFile::Open( fileoutname.c_str(), "RECREATE" );
+  TFile * fileout = TFile::Open( outfname, "RECREATE" );
   Int_t runnum;
   Int_t event;
   Float_t hitt;
@@ -192,7 +480,7 @@ void PurityAnalysis::run()
   RooRealVar charge( "charge", "dQ/dx ( ADC/cm )", ADCcutofflow, ADCcutoffhigh );
   RooRealVar tdrift( "tdrift", "tdrift", 0, drifttimemax );
   RooRealVar weight( "weight", "weight", -10, 10 );
-  RooDataSet * chgdata = new RooDataSet( "chgdata", "chgdata", RooArgSet( tdrift, charge ), RooFit::StoreError( RooArgSet( charge ) ) /* , RooFit::WeightVar( "weight" )*/ );
+  RooDataSet * chgdata = new RooDataSet( "chgdata", "chgdata", RooArgSet( tdrift, charge ), RooFit::StoreError( RooArgSet( charge ) ));
   chgdata->Print();
 
   std::vector<ChargeHistogram> timeBinHist( Nbins );
@@ -218,41 +506,52 @@ void PurityAnalysis::run()
       fabinmap[i] = std::make_pair( 0, 0 );
     }
 
-  for ( auto const & hititr : *( file->GetHitMap() ) )
+  std::map<int,std::map<int,int> > runseventshits;
+  for ( auto hit : hitvec)
     {
-      const types::HitInfo * hit = &( hititr.second );
-      if ( hit->run >= 15483 && hit->run <= 15502 ) continue;
-      if ( hit->run == 15593 ) continue;
-      if ( hit->run >= 15634 && hit->run <= 15643 ) continue;
-      if ( hit->run >= 15664 && hit->run <= 15674 ) continue;
-      if ( hit->run == 15823 || hit->run == 15914 || hit->run == 15940 || hit->run == 15980 || hit->run == 16025 || hit->run == 16083 || hit->run == 16147 || hit->run == 16586 ) continue;
-      if ( hit->run >= 16593 && hit->run <= 16596 ) continue;
-      if ( hit->channel == 566 || hit->channel == 885 || hit->channel == 1547 ) continue;
-      if ( !( hit->fitsuccess ) ) continue;
-      //if ( hit->tpc != 1 ) continue;//if you uncomment this, then must re-consider the fitndf cut below
-      if ( hit->width > 400 ) continue;
-      if ( hit->fitchi2 < -9999 || hit->fitchi2 > 10 ) continue;
-      if ( hit->integral < -500e4 ) continue;
-      if ( hit->rms > 40 ) continue;
-      if ( hit->rms < 10 ) continue;
-      if ( fabs( hit->baseline ) > 20 ) continue;
-      if ( hit->fitconstant<-49 ) continue;
-      if ( hit->fitconstant>249 ) continue;
-      if ( hit->fitndf<50 ) continue;  // basically cut on 50 hits per track
-      if ( fabs( hit->fitquadratic )>0.000199 ) continue;  // skip if fit parameter is maximal
-      if ( cuts.ChannelPass( hit ) &&
-           cuts.CounterPass( hit ) )
+      if ( hit.run >= 15548 && hit.run <= 16028 ) continue;
+      if ( hit.run >= 15483 && hit.run <= 15502 ) continue;
+      if ( hit.run == 15593 ) continue;
+      if ( hit.run >= 15634 && hit.run <= 15643 ) continue;
+      if ( hit.run >= 15664 && hit.run <= 15674 ) continue;
+      if ( hit.run == 15823 || hit.run == 15914 || hit.run == 15940 || hit.run == 15980 || hit.run == 16025 || hit.run == 16083 || hit.run == 16147 || hit.run == 16586 ) continue;
+      if ( hit.run >= 16593 && hit.run <= 16596 ) continue;
+      if ( !( hit.fitsuccess ) ) continue;
+      if ( hit.fitchi2 < -9999 || hit.fitchi2 > 10 ) continue;
+      if ( hit.fitconstant<-49 ) continue;
+      if ( hit.fitconstant>249 ) continue;
+      if ( hit.fitndf<50 ) continue;  // basically cut on 50 hits per track
+      if ( fabs( hit.fitquadratic )>0.000199 ) continue;  // skip if fit parameter is maximal
+
+      int nhits = hit.channel.size();
+      for (int i = 0; i < nhits; ++i)
         {
-          runnum = hit->run;
-          event = hit->event;
-          hitt = hit->hitt;
+          if ( hit.channel[i] == 566 || hit.channel[i] == 885 || hit.channel[i] == 1547 ) continue;
+          //if ( hit.tpc != 1 ) continue;//if you uncomment this, then must re-consider the fitndf cut below
+          if ( hit.width[i] > 400 ) continue;
+          if ( hit.integral[i] < -500e4 ) continue;
+          if ( hit.rms[i] > 40 ) continue;
+          if ( hit.rms[i] < 10 ) continue;
+          if ( fabs( hit.baseline[i] ) > 20 ) continue;
+          if (hit.channel[i] == 288 || hit.channel[i] == 399 ||
+              hit.channel[i] == 400 || hit.channel[i] == 511 ||
+              hit.channel[i] == 800 || hit.channel[i] == 911 ||
+              hit.channel[i] == 912 || hit.channel[i] == 1023 ||
+              hit.channel[i] == 1312 || hit.channel[i] == 1423 ||
+              hit.channel[i] == 1424 || hit.channel[i] == 1535 ||
+              hit.channel[i] == 1824 || hit.channel[i] == 1935 ||
+              hit.channel[i] == 1936 || hit.channel[i] == 2047) continue;
+
+          runnum = hit.run;
+          event = hit.event;
+          hitt = hit.hitt[i];
           binnum = getBinNumber( hitt, timeBinHist );
-          foundrealhit = !hit->assumedhit && hit->fitrealhit;
-          assumedhit = hit->assumedhit;
-          Double_t hitintegral = hit->integral;
-          dqdx =  hitintegral / hit->segmentlength;
-          channel = hit->channel;
-          tpc = hit->tpc;
+          foundrealhit = !hit.assumedhit[i] && hit.fitrealhit[i];
+          assumedhit = hit.assumedhit[i];
+          Double_t hitintegral = hit.integral[i];
+          dqdx =  hitintegral / hit.segmentlength[i];
+          channel = hit.channel[i];
+          tpc = hit.tpc[i];
           hitstree->Fill();
 
           if ( foundrealhit )
@@ -265,20 +564,37 @@ void PurityAnalysis::run()
               assumed->Fill( dqdx );
               fabinmap[binnum].second = 1 + fabinmap[binnum].second;
             }
-          if ( hit->assumedhit || hit->fitrealhit )
+          if ( hit.assumedhit[i] || hit.fitrealhit[i] )
             {
               HitSave hs;
               hs.hitt = hitt;
               hs.unscaleddqdx = dqdx;
               hs.dqdx = dqdx;
-              hs.weight = 1; // / (compareQ->GetBinError(compareQ->FindBin(hitintegral)) * effQ->GetBinContent(effQ->FindBin(hitintegral)));
+              hs.weight = 1;     // / (compareQ->GetBinError(compareQ->FindBin(hitintegral)) * effQ->GetBinContent(effQ->FindBin(hitintegral)));
 
-              // / effQ->GetBinContent(effQ->FindBin(hit->integral / scaleQ->GetBinContent(scaleQ->FindBin(hit->integral)) )); //compareQ->GetBinError(compareQ->FindBin(hit->integral / scaleQ->GetBinContent(scaleQ->FindBin(hit->integral)))); // / (compareQ->GetBinError(compareQ->FindBin(hit->integral /* / scaleQ->GetBinContent(scaleQ->FindBin(hit->integral)) */ )) * effQ->GetBinContent(effQ->FindBin(hit->integral /* / scaleQ->GetBinContent(scaleQ->FindBin(hit->integral))*/ )) );
+              // / effQ->GetBinContent(effQ->FindBin(hit.integral / scaleQ->GetBinContent(scaleQ->FindBin(hit.integral)) )); //compareQ->GetBinError(compareQ->FindBin(hit.integral / scaleQ->GetBinContent(scaleQ->FindBin(hit.integral)))); // / (compareQ->GetBinError(compareQ->FindBin(hit.integral )) * effQ->GetBinContent(effQ->FindBin(hit.integral )) );
               hitmap[channel].push_back( hs );
+
+              if (runseventshits.find(runnum) == runseventshits.end())
+                {
+                  runseventshits[runnum][event] = 1;
+                }
+              else
+                {
+                  if (runseventshits[runnum].find(event) == runseventshits[runnum].end())
+                    {
+                      runseventshits[runnum][event] = 1;
+                    }
+                  else
+                    {
+                      runseventshits[runnum][event] += 1;
+                    }
+                }
 
               //std::cout << "HitT: " << hitt << "  dQdx: " << dqdx << "  Weight: " << hs.weight << std::endl;
             }
-          //if ( hit->fitrealhit ) hitmap[channel].push_back( std::make_pair( hitt, dqdx ) );
+          //if ( hit.fitrealhit ) hitmap[channel].push_back( std::make_pair( hitt, dqdx ) );
+
         }
     }
   hitstree->Write();
@@ -406,7 +722,7 @@ void PurityAnalysis::run()
               charge = ( Float_t )( i_hit.dqdx );
               tdrift = ( Float_t )( i_hit.hitt );
               weight = ( Float_t )( i_hit.weight );
-              chgdata->add( RooArgSet( tdrift, charge ) /* , (Float_t)(i_hit.weight)*/ );
+              chgdata->add( RooArgSet( tdrift, charge ) ); // (Float_t)(i_hit.weight));
               for ( UInt_t i_hist = 0; i_hist < timeBinHist.size(); i_hist++ )
                 {
                   if ( i_hit.hitt >= timeBinHist[i_hist].binlow && i_hit.hitt < timeBinHist[i_hist].binhigh )
@@ -525,15 +841,15 @@ void PurityAnalysis::run()
 
           std::cout << "maxbin=" << maxbin << "  maxvalue=" << maxvalue << "  cutoffheight=( " << cutoffheightlow << ", " << cutoffheighthigh << " )  lowval=" << lowval << "  highval=" << highval << std::endl;
 
-/*
-          TCanvas * canvtest = new TCanvas("canvtest","",1600,1600);
-          clonehist->Draw();
-          clonehist->SetLineColor(kRed);
-          timeBinHist[i].histuw->Draw("same");
-          timeBinHist[i].histuw->SetLineColor(kBlue);
-          canvtest->Update();
+
+          //TCanvas * canvtest = new TCanvas("canvtest","",1600,1600);
+          //clonehist->Draw();
+          //clonehist->SetLineColor(kRed);
+          //timeBinHist[i].histuw->Draw("same");
+          //timeBinHist[i].histuw->SetLineColor(kBlue);
+          //canvtest->Update();
           //std::cin.get();
- */
+
 
           pgmean.setVal( maxbin );
           pgmean.setMin( lowval );
@@ -583,10 +899,10 @@ void PurityAnalysis::run()
 
           if ( DoLxG )
             {
-              RooFitResult * fr = lxg.fitTo( *roodata, RooFit::Save(), RooFit::PrintLevel( 1 ), RooFit::Range( lxglowval, lxghighval ), /*RooFit::SumW2Error( kTRUE ),*/ RooFit::Minimizer("Minuit2"), RooFit::Minos(kTRUE), RooFit::Offset(kTRUE) );
+              RooFitResult * fr = lxg.fitTo( *roodata, RooFit::Save(), RooFit::PrintLevel( 1 ), RooFit::Range( lxglowval, lxghighval ), RooFit::Minimizer("Minuit2"), RooFit::Minos(kTRUE), RooFit::Offset(kTRUE) ); // RooFit::SumW2Error(kTRUE)
               RooPlot * lxgframe = charge.frame( RooFit::Title( TString::Format( "%s L( x )g", timeBinHist[i].hist->GetTitle() ) ) );
-              RooDataHist * binhistuw = new RooDataHist(timeBinHist[i].histuw->GetName(),timeBinHist[i].histuw->GetTitle(),RooArgList(charge),timeBinHist[i].histuw);
-              binhistuw->plotOn( lxgframe, RooFit::DrawOption("e2"), RooFit::FillColor(kBlue), RooFit::FillStyle(3001), RooFit::LineColor(kBlack), RooFit::MarkerColor(kBlack) );
+              //RooDataHist * binhistuw = new RooDataHist(timeBinHist[i].histuw->GetName(),timeBinHist[i].histuw->GetTitle(),RooArgList(charge),timeBinHist[i].histuw);
+              //binhistuw->plotOn( lxgframe, RooFit::DrawOption("e2"), RooFit::FillColor(kBlue), RooFit::FillStyle(3001), RooFit::LineColor(kBlack), RooFit::MarkerColor(kBlack) );
               roodata->plotOn( lxgframe, RooFit::Binning( 200 ), RooFit::DataError(RooAbsData::SumW2), RooFit::LineColor(kBlack), RooFit::MarkerColor(kBlack) );
               lxg.plotOn( lxgframe, RooFit::Name( "lxg" ), RooFit::LineColor( kRed ), RooFit::Range( lxglowval, lxghighval ) );
               results[i].lxg_chi2ndf = lxgframe->chiSquare();
@@ -612,14 +928,14 @@ void PurityAnalysis::run()
               lxgframe->Draw();
               canvlxg2->Write();
               canvlxg2->SaveAs( TString::Format( "%s.png", buff ) );
-              /*
-                 gSystem->ProcessEvents();
-                 TImage *imglxg = TImage::Create();
-                 imglxg->FromPad( canvlxg2 );
-                 char newbuff[100];
-                 sprintf( newbuff, "%s.png", buff );
-                 imglxg->WriteImage( newbuff );
-               */
+
+              //gSystem->ProcessEvents();
+              //TImage *imglxg = TImage::Create();
+              //imglxg->FromPad( canvlxg2 );
+              //char newbuff[100];
+              //sprintf( newbuff, "%s.png", buff );
+              //imglxg->WriteImage( newbuff );
+
 
               if ( DoResidual )
                 {
@@ -702,7 +1018,7 @@ void PurityAnalysis::run()
               cvxg.fitTo( *roodata, RooFit::Save(), RooFit::PrintLevel( -1 ), RooFit::Range( lxglowval, lxghighval ) );
               RooPlot * vxgframe = charge.frame( RooFit::Title( TString::Format( "%s V( x )g", timeBinHist[i].hist->GetTitle() ) ) );
               roodata->plotOn( vxgframe, RooFit::Binning( 200 ) );
-              cvxg.plotOn( vxgframe, RooFit::LineColor( kGreen ) /*, RooFit::ShiftToZero()*/, RooFit::Name( "vxg" ), RooFit::Range( lxglowval, lxghighval ) );
+              cvxg.plotOn( vxgframe, RooFit::LineColor( kGreen ), RooFit::Name( "vxg" ), RooFit::Range( lxglowval, lxghighval ) );
               //results[i].vxg_chi2ndf = vxgframe->chiSquare();
 
               TPaveLabel * tvxg = new TPaveLabel( 0.7, 0.83, 0.99, 0.9, Form( " #chi^{2}/NDF = %f", vxgframe->chiSquare() ), "NDC" );
@@ -816,7 +1132,7 @@ void PurityAnalysis::run()
               cpg.fitTo( *roodata, RooFit::Save(), RooFit::PrintLevel( -1 ), RooFit::Range( lowval, highval ), RooFit::SumW2Error( true ) );
               RooPlot * pgframe = charge.frame( RooFit::Title( TString::Format( "%s PeakGaussian", timeBinHist[i].hist->GetTitle() ) ) );
               roodata->plotOn( pgframe, RooFit::Binning( 200 ) );
-              cpg.plotOn( pgframe, RooFit::Name( "pgb" ), RooFit::LineColor( kBlue ), RooFit::Range( lowval, highval ) /*, RooFit::ShiftToZero() , RooFit::VLines()*/ );
+              cpg.plotOn( pgframe, RooFit::Name( "pgb" ), RooFit::LineColor( kBlue ), RooFit::Range( lowval, highval ) );
               //results[i].pg_chi2ndf = pgframe->chiSquare();
 
               TPaveLabel * tpg = new TPaveLabel( 0.7, 0.83, 0.99, 0.9, Form( " #chi^{2}/NDF = %f", pgframe->chiSquare() ), "NDC" );
@@ -839,14 +1155,14 @@ void PurityAnalysis::run()
               pgframe->Draw();
               canvpg2->Write();
               canvpg2->SaveAs( TString::Format( "%s.png", buff ) );
-              /*
-                 gSystem->ProcessEvents();
-                 TImage *imgpg = TImage::Create();
-                 imgpg->FromPad( canvpg2 );
-                 char newbuff[100];
-                 sprintf( newbuff, "%s.png", buff );
-                 imgpg->WriteImage( newbuff );
-               */
+
+              //gSystem->ProcessEvents();
+              //TImage *imgpg = TImage::Create();
+              //imgpg->FromPad( canvpg2 );
+              //char newbuff[100];
+              //sprintf( newbuff, "%s.png", buff );
+              //imgpg->WriteImage( newbuff );
+
 
               if ( DoResidual )
                 {
@@ -984,13 +1300,15 @@ void PurityAnalysis::run()
       TF1 * expotrunc = new TF1( "expotrunc", "[0]*exp( -x/[1] )", 0, 1 );
       expotrunc->SetParNames( "dQdx0", "eLifetime" );
       expotrunc->SetParameters( 3000, 3000 );
-      UInt_t nbinwidth = 4;
-      for ( UInt_t i_bin = 1; i_bin < Nbins-nbinwidth; ++i_bin )
+      UInt_t nbinwidth = 5;
+      int whichbin = 0;
+      for ( UInt_t i_bin = 1; i_bin < Nbins-nbinwidth; i_bin += nbinwidth )
         {
           expotrunc->SetRange( timeBinHist[i_bin].binlow, timeBinHist[i_bin+nbinwidth].binhigh );
           hbin_lxg->Fit( "expotrunc", "RQ" );
-          lifetimedrift->SetPoint( i_bin-1, timeBinHist[i_bin+nbinwidth].bincenter, expotrunc->GetParameter( 1 ) );
-          lifetimedrift->SetPointError( i_bin-1, 0, expotrunc->GetParError( 1 ) );
+          lifetimedrift->SetPoint( whichbin, timeBinHist[i_bin+nbinwidth].bincenter, expotrunc->GetParameter( 1 ) );
+          lifetimedrift->SetPointError( whichbin, 0, expotrunc->GetParError( 1 ) );
+          ++whichbin;
         }
       TCanvas * canvlifetimedrift_lxg = new TCanvas( "cltd_lxg", "cltd_lxg", 1600, 900 );
       canvlifetimedrift_lxg->cd();
@@ -1275,11 +1593,25 @@ void PurityAnalysis::run()
       fitsuccess = r.fitsuccess;
       resulttree->Fill();
     }
+  std::cout << "# Runs included = " << runseventshits.size() << std::endl;
+  TH1F * hitsperevent = new TH1F("hpe","# Hits Per Event",100,0,340);
+  int numberevents = 0;
+  for (auto run : runseventshits)
+    {
+      for (auto event : run.second)
+        {
+          numberevents++;
+          hitsperevent->Fill(event.second);
+        }
+    }
+  std::cout << "# Events included = " << numberevents << std::endl;
+  TCanvas * canvhitsperevent = new TCanvas("canvhitsperevent","",2000,1600);
+  hitsperevent->Draw();
+  canvhitsperevent->Update();
+  canvhitsperevent->SaveAs("canvhitsperevent.png");
 
   std::cout << "Found Number = " << found->GetEntries() << "  Assumed Number = " << assumed->GetEntries() << std::endl;
   resulttree->Write();
   fileout->Close();
   return;
 }
-
-#endif

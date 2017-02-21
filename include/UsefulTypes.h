@@ -111,6 +111,8 @@ namespace types {
   typedef std::map<std::string,CutMap_F> AnalysisCuts_F;
   typedef std::map<std::string,Bool_t> CutMap_B;
   typedef std::map<std::string,CutMap_B> AnalysisCuts_B;
+  typedef std::map<std::string,std::string> CutMap_S;
+  typedef std::map<std::string,CutMap_S> AnalysisCuts_S;
 
 };
 

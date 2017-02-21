@@ -19,7 +19,7 @@ LDLIBS=`root-config --glibs` -lTreePlayer -lRooFit -lRooFitCore -lMinuit -lMathM
 all: $(EXECUTABLE)
 
 $(EXECUTABLE): $(OBJ)
-	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
+	$(CC) $(LDFLAGS) $^ $(LDLIBS)  -o $@
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cc
 	$(CC) $(CFLAGS) -c $< -o $@
