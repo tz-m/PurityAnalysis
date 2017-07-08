@@ -19,17 +19,17 @@ Double_t CauchyPeak(Double_t *x, Double_t *par)
   return func;
 }
 
-const UInt_t nscale = 1;
-const UInt_t npur   = 1;
+const UInt_t nscale = 16;
+const UInt_t npur   = 3;
 
 void PurityEfficiency()
 {
   std::ofstream systematics;
   systematics.open( "systematics.txt", ios::out );
 
-  Double_t mcscale[nscale] = {1.0};
+  Double_t mcscale[nscale] = {0.5,0.6,0.7,0.8,0.9,1.0,1.1,1.2,1.3,1.4,1.5,1.6,1.7,1.8,1.9,2.0};
   //Double_t mcscale[nscale] = {0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0, 7.0, 8.0, 9.0, 10.0};
-  Int_t elife[npur] = {3};
+  Int_t elife[npur] = {2000,2500,3000};
   //Int_t elife[npur] = {1, 2, 3, 5, 8};
 
   std::map<Int_t, Double_t> counterx;
@@ -48,7 +48,7 @@ void PurityEfficiency()
   std::map<Int_t, TGraphErrors*> effgraphs; // efficiency v noise
   std::map<Int_t, TGraphErrors*> cpurgraphs; // charge purity v noise
   std::map<Int_t, TGraphErrors*> ceffgraphs; // charge efficiency v noise
-  std::map<Int_t, TGraphErrors*> cratiographs; // charge ratio v noise
+  //std::map<Int_t, TGraphErrors*> cratiographs; // charge ratio v noise
 
   std::map<Int_t, std::map<UInt_t, TH1D*> > chargeresolution;
   std::map<Int_t, std::map<UInt_t, TH1D*> > chargeresidual;
@@ -58,19 +58,19 @@ void PurityEfficiency()
   std::map<Int_t, std::map<UInt_t, TGraphErrors*> > effgraphsopp; // efficiency v drift distance
   std::map<Int_t, std::map<UInt_t, TGraphErrors*> > cpurgraphsopp; // charge purity v drift distance
   std::map<Int_t, std::map<UInt_t, TGraphErrors*> > ceffgraphsopp; // charge efficiency v drift distance
-  std::map<Int_t, std::map<UInt_t, TGraphErrors*> > cratiographsopp; // charge ratio v drift distance
+  //std::map<Int_t, std::map<UInt_t, TGraphErrors*> > cratiographsopp; // charge ratio v drift distance
 
   std::map<Int_t, std::map<UInt_t, TH2D*> > purhisttrig;
   std::map<Int_t, std::map<UInt_t, TH2D*> > effhisttrig;
   std::map<Int_t, std::map<UInt_t, TH2D*> > cpurhisttrig;
   std::map<Int_t, std::map<UInt_t, TH2D*> > ceffhisttrig;
-  std::map<Int_t, std::map<UInt_t, TH2D*> > ratiohisttrig;
+  //std::map<Int_t, std::map<UInt_t, TH2D*> > ratiohisttrig;
 
   std::map<Int_t, std::map<UInt_t, TH2D*> > purerrhisttrig;
   std::map<Int_t, std::map<UInt_t, TH2D*> > efferrhisttrig;
   std::map<Int_t, std::map<UInt_t, TH2D*> > cpurerrhisttrig;
   std::map<Int_t, std::map<UInt_t, TH2D*> > cefferrhisttrig;
-  std::map<Int_t, std::map<UInt_t, TH2D*> > ratioerrhisttrig;
+  //std::map<Int_t, std::map<UInt_t, TH2D*> > ratioerrhisttrig;
 
   TProfile * compareQ = new TProfile("compareQ",";Q_{MC};(Q_{MC}-Q_{Reco})/Q_{MC}",1000,200,50000,"s");
   TProfile * scaleQ = new TProfile("scaleQ",";Q_{MC};Q_{Reco}/Q_{MC}",1000,200,50000,"s");
@@ -82,7 +82,7 @@ void PurityEfficiency()
       effgraphs[elife[ipur]] = new TGraphErrors();
       cpurgraphs[elife[ipur]] = new TGraphErrors();
       ceffgraphs[elife[ipur]] = new TGraphErrors();
-      cratiographs[elife[ipur]] = new TGraphErrors();
+      //cratiographs[elife[ipur]] = new TGraphErrors();
 
       Int_t numactual = 0;
       for ( UInt_t iscale = 0; iscale < nscale; ++iscale )
@@ -92,7 +92,7 @@ void PurityEfficiency()
           effgraphsopp[elife[ipur]][iscale] = new TGraphErrors();
           cpurgraphsopp[elife[ipur]][iscale] = new TGraphErrors();
           ceffgraphsopp[elife[ipur]][iscale] = new TGraphErrors();
-          cratiographsopp[elife[ipur]][iscale] = new TGraphErrors();
+          //cratiographsopp[elife[ipur]][iscale] = new TGraphErrors();
 
           chargeresolution[elife[ipur]][iscale] = new TH1D( TString::Format( "chgresol_%u_%.1f", elife[ipur], mcscale[iscale] ), ";(Q_{reco} - Q_{MC}) / Q_{MC}; # Entries", 500, -1, 1 );
           //chargeresolution[elife[ipur]][iscale]->Sumw2();
@@ -111,7 +111,7 @@ void PurityEfficiency()
           cefferrhisttrig[elife[ipur]][iscale] = new TH2D( TString::Format( "cefferrhisttrig_%u_%.1f", elife[ipur], mcscale[iscale] ), "", 10, 27.5, 37.5, 10, 5.5, 15.5 );
           ratioerrhisttrig[elife[ipur]][iscale] = new TH2D( TString::Format( "ratioerrhisttrig_%u_%.1f", elife[ipur], mcscale[iscale] ), "", 10, 27.5, 37.5, 10, 5.5, 15.5 );
 
-          TString filename = TString::Format( "ana_mixer_%ums_mcscale%.1f_hist.root", elife[ipur], mcscale[iscale] );
+          TString filename = TString::Format( "/media/mthiesse/Dell Portable Hard Drive/PurityData/robust_newgain_%uus_mcscale%.1f_hist.root",elife[ipur],mcscale[iscale]);
           //TString filename = TString::Format( "robustmcana_%ums_%.1f.root", elife[ipur], mcscale[iscale] );
           std::cout << "Filename = " << filename << std::endl;
 
@@ -126,6 +126,12 @@ void PurityEfficiency()
           TTreeReaderValue<Double_t> chargepurity( reader, "chargepurity" );
           TTreeReaderValue<Double_t> chargeefficiency( reader, "chargeefficiency" );
           TTreeReaderValue<Double_t> chargeratio( reader, "chargeratio" );
+          TTreeReaderValue<Int_t> tp(reader,"tp");
+          TTreeReaderValue<Int_t> fp(reader,"fp");
+          TTreeReaderValue<Int_t> fn(reader,"fn");
+          TTreeReaderValue<Double_t> tpc(reader,"tpc");
+          TTreeReaderValue<Double_t> fpc(reader,"fpc");
+          TTreeReaderValue<Double_t> fnc(reader,"fnc");
 
           std::vector<Double_t> purvec;
           std::vector<Double_t> effvec;
@@ -141,6 +147,17 @@ void PurityEfficiency()
 
           while ( reader.Next() )
             {
+              Double_t tp_val = *tp;
+              Double_t fp_val = *fp;
+              Double_t fn_val = *fn;
+              Double_t tpc_val = *tpc;
+              Double_t fpc_val = *fpc;
+              Double_t fnc_val = *fnc;
+              Double_t eventpurity = tp_val / (tp_val + fp_val);
+              Double_t eventefficiency = tp_val / (tp_val + fn_val);
+              Double_t eventchgpur = tpc_val / (tpc_val + fpc_val);
+              Double_t eventchgeff = tpc_val / (tpc_val + fnc_val);
+
               if ( *purity>-0.5 && *purity<2.0 )
                 {
                   purvec.push_back( *purity );
